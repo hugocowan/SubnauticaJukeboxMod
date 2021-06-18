@@ -8,8 +8,10 @@ namespace JukeboxSpotify
     public class MainPatcher
     {
         [QModPatch]
-        public static void Patch()
+        public async static void Patch()
         {
+            new SQL();
+            await Spotify.SpotifyLogin();
             Harmony harmony = new Harmony("com.boogaliwoogali.subnautica.jukeboxspotify.mod");
             harmony.PatchAll();
         }

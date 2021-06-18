@@ -1,10 +1,9 @@
 ﻿using System;
-using QModManager.Utility;
 using System.Data.SQLite;
 
 namespace JukeboxSpotify
 {
-    public class SQL
+    class SQL
     {
         public static SQLiteConnection _conn { get; private set; }
 

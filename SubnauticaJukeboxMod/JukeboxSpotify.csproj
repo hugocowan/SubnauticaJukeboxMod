@@ -95,10 +95,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Spotify.cs" />
+    <Compile Include="JukeboxStopPatcher.cs" />
     <Compile Include="Variables.cs" />
     <Compile Include="ErrorHandler.cs" />
     <Compile Include="Sql.cs" />
-    <Compile Include="JukeboxPatcher.cs" />
+    <Compile Include="JukeboxPlayPatcher.cs" />
     <Compile Include="MainPatcher.cs" />
     <None Include="App.config" />
     <None Include="mod.json" />
