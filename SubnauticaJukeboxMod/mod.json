@@ -1,0 +1,11 @@
+﻿{
+  "Id": "JukeboxSpotify",
+  "DisplayName": "Jukebox Spotify",
+  "Author": "boogaliwoogali",
+  "Version": "0.1",
+  "Requires": [],
+  "Enable": true,
+  "Game": "BelowZero",
+  "AssemblyName": "JukeboxSpotify.dll",
+  "Config": {}
+}
