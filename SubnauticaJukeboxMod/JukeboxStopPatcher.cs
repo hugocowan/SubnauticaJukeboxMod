@@ -1,4 +1,5 @@
 ﻿using HarmonyLib;
+using QModManager.Utility;
 
 namespace JukeboxSpotify
 {
@@ -6,5 +7,11 @@ namespace JukeboxSpotify
     [HarmonyPatch("Stop")]
     class JukeboxStopPatcher
     {
+        [HarmonyPostfix]
+        public async static void Postfix()
+        {
+            Logger.Log(Logger.Level.Info, "Pausing track", null, true);
+            await Spotify._spotify.Player.PausePlayback();
+        }
     }
 }

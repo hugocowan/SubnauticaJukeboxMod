@@ -3,7 +3,6 @@ using QModManager.Utility;
 using System;
 using System.Threading.Tasks;
 using SpotifyAPI.Web;
-using SpotifyAPI.Web.Auth;
 
 namespace JukeboxSpotify
 {
@@ -11,7 +10,6 @@ namespace JukeboxSpotify
     [HarmonyPatch("Play")]
     class JukeboxPlayPatcher
     {
-
         [HarmonyPostfix]
         public async static void Postfix()
         {
