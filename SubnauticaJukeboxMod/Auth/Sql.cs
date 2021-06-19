@@ -48,7 +48,7 @@ namespace JukeboxSpotify
 
         }
 
-        public static void queryTable(string query)
+        public static void QueryTable(string query)
         {
             SQLiteCommand cmd = _conn.CreateCommand();
 

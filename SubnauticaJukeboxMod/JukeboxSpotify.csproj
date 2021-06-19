@@ -95,13 +95,19 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Spotify.cs" />
-    <Compile Include="JukeboxStopPatcher.cs" />
+    <Compile Include="Patches\JukeboxGetNextPatcher.cs" />
+    <Compile Include="Patches\MusicManagerOnGameResumedPatcher.cs" />
+    <Compile Include="Patches\MusicManagerOnGamePausedPatcher.cs" />
+    <Compile Include="Patches\PlatformUtilsOnDestroyPatcher.cs" />
+    <Compile Include="Patches\PlayerAwakePatcher.cs" />
+    <Compile Include="Patches\SetInfoPatcher.cs" />
+    <Compile Include="Auth\Spotify.cs" />
+    <Compile Include="Patches\JukeboxStopPatcher.cs" />
     <Compile Include="Variables.cs" />
     <Compile Include="ErrorHandler.cs" />
-    <Compile Include="Sql.cs" />
-    <Compile Include="JukeboxPlayPatcher.cs" />
-    <Compile Include="MainPatcher.cs" />
+    <Compile Include="Auth\Sql.cs" />
+    <Compile Include="Patches\JukeboxPlayPatcher.cs" />
+    <Compile Include="Patches\MainPatcher.cs" />
     <None Include="App.config" />
     <None Include="mod.json" />
     <Compile Include="Properties\AssemblyInfo.cs" />

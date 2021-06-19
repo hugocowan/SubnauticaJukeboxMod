@@ -7,11 +7,11 @@ namespace JukeboxSpotify
     [QModCore]
     public class MainPatcher
     {
+        public static bool? _isPlaying = null;
+
         [QModPatch]
-        public async static void Patch()
+        public static void Patch()
         {
-            new SQL();
-            await Spotify.SpotifyLogin();
             Harmony harmony = new Harmony("com.boogaliwoogali.subnautica.jukeboxspotify.mod");
             harmony.PatchAll();
         }

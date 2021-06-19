@@ -11,22 +11,20 @@ namespace JukeboxSpotify
         public static EmbedIOAuthServer _server = null;
         public static SpotifyClient _spotify = null;
         public static string _refreshToken = null;
+        public static Device _device = null;
 
         public async static Task SpotifyLogin()
         {
 
-            Logger.Log(Logger.Level.Info, "Loading Spotify with Spotify ID: " + Variables._clientId, null, true);
-
             try
             {
-                // Check the database for stored authCodes
+                // Check the database for a stored refresh token
                 _refreshToken = SQL.ReadData("SELECT * FROM Auth");
 
                 if (null != _refreshToken)
                 {
                     try
                     {
-                        Logger.Log(Logger.Level.Info, "We have a refresh token! " + _refreshToken, null, true);
                         await RefreshSession();
                     }
                     catch (Exception e)
@@ -34,7 +32,7 @@ namespace JukeboxSpotify
                         new ErrorHandler(e, "An error occurred refreshing the session");
                         await RunServer();
                     }
-                }
+                } // If there wasn't a refresh token, we need to get one
                 else
                 {
                     await RunServer();
@@ -46,6 +44,9 @@ namespace JukeboxSpotify
                     await Task.Delay(1000);
                 }
 
+                await GetDevice();
+
+                Logger.Log(Logger.Level.Info, "Spotify successfully loaded ", null, true);
             }
             catch (Exception e)
             {
@@ -53,17 +54,49 @@ namespace JukeboxSpotify
             }
         }
 
+        public async static Task GetDevice()
+        {
+            // Get an available device to play songs with.
+            Device availableDevice = null;
+
+            try
+            {
+                DeviceResponse devices = await _spotify.Player.GetAvailableDevices();
+                bool foundActiveDevice = false;
+                int counter = 1;
+
+                devices.Devices.ForEach(delegate (Device device)
+                {
+                    // Find the first active device.
+                    if (false == foundActiveDevice && device.IsActive)
+                    {
+                        availableDevice = device;
+                        foundActiveDevice = true;
+                    }
+
+                    counter++;
+                });
+
+                // If no active device was found, choose the first one in the devices list.
+                if (null == availableDevice && devices.Devices.Count > 0) availableDevice = devices.Devices[0];
+
+
+                _device = availableDevice;
+            }
+            catch (Exception e)
+            {
+                new ErrorHandler(e, "Something went wrong getting a device");
+            }
+        }
+
         public async static Task RunServer()
         {
-            Logger.Log(Logger.Level.Info, "Starting up server...", null, true);
             _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
             await _server.Start();
 
             _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
             _server.ErrorReceived += OnErrorReceived;
 
-
-            Logger.Log(Logger.Level.Info, "Requesting user account access...", null, true);
             var request = new LoginRequest(_server.BaseUri, Variables._clientId, LoginRequest.ResponseType.Code)
             {
                 Scope = new[] {
@@ -108,7 +141,7 @@ namespace JukeboxSpotify
             );
 
 
-            if (saveToDB) SQL.queryTable("INSERT INTO Auth (authorization_code, access_token, refresh_token, expires_in) VALUES(" +
+            if (saveToDB) SQL.QueryTable("INSERT INTO Auth (authorization_code, access_token, refresh_token, expires_in) VALUES(" +
                 "'" + code + "'," +
                 "'" + tokenResponse.AccessToken + "'," +
                 "'" + tokenResponse.RefreshToken + "'," +
