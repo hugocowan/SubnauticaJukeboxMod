@@ -1,7 +1,4 @@
 ﻿using HarmonyLib;
-using QModManager.Utility;
-using System;
-using System.Threading.Tasks;
 using SpotifyAPI.Web;
 
 namespace JukeboxSpotify
@@ -12,12 +9,10 @@ namespace JukeboxSpotify
         [HarmonyPostfix]
         public async static void Postfix()
         {
-            Logger.Log(Logger.Level.Info, "Playing track", null, true);
             Jukebox.volume = 0;
 
             MainPatcher._isPlaying = true;
-            var playbackRequest = new PlayerResumePlaybackRequest() { DeviceId = Spotify._device.Id };
-            await Spotify._spotify.Player.ResumePlayback(playbackRequest);
+            await Spotify._spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify._device.Id });
         }
 
         //private async static Task PlayTrack()
@@ -39,7 +34,7 @@ namespace JukeboxSpotify
             //    while (track.Id != currentTrack.Id)
             //    {
             //        // Skip the current song if it's not the one we want.
-            //        await Spotify._spotify.Player.SkipNext();
+            //        await Spotify._spotify.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = Spotify._device.Id });
 
             //        // We need this delay or else the song we want can get skipped.
             //        await Task.Delay(250);

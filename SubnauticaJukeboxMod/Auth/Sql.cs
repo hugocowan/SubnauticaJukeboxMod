@@ -18,7 +18,7 @@ namespace JukeboxSpotify
             SQLiteConnection conn;
 
             // Create a new database connection
-            conn = new SQLiteConnection(@"URI=file:.\QMods\JukeboxSpotify\jukeboxSpotify.db");
+            conn = new SQLiteConnection(@"URI=file:.\QMods\JukeboxSpotify\JukeboxSpotify.db");
 
             // Open the connection
             try

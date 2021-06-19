@@ -6,7 +6,7 @@ namespace JukeboxSpotify
     class PlayerAwakePatcher
     {
         [HarmonyPostfix]
-        public async static void Postfix()
+        public async static void InitiateDBAndSpotify()
         {
             new SQL();
             await Spotify.SpotifyLogin();

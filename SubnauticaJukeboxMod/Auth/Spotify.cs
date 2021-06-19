@@ -12,6 +12,7 @@ namespace JukeboxSpotify
         public static SpotifyClient _spotify = null;
         public static string _refreshToken = null;
         public static Device _device = null;
+        public static bool _checkingTrack = false;
 
         public async static Task SpotifyLogin()
         {
@@ -47,6 +48,8 @@ namespace JukeboxSpotify
                 await GetDevice();
 
                 Logger.Log(Logger.Level.Info, "Spotify successfully loaded ", null, true);
+
+                await GetCurrentTrack();
             }
             catch (Exception e)
             {
@@ -86,6 +89,21 @@ namespace JukeboxSpotify
             catch (Exception e)
             {
                 new ErrorHandler(e, "Something went wrong getting a device");
+            }
+        }
+
+        // Update what's currently playing.
+        public async static Task GetCurrentTrack(bool plsRepeat = false)
+        {
+            var currentlyPlaying = await _spotify.Player.GetCurrentPlayback();
+            var currentTrack = (FullTrack) currentlyPlaying.Item;
+
+            MainPatcher._currentTrackTitle = currentTrack.Name;
+            MainPatcher._currentTrackLength = (uint) currentTrack.DurationMs;
+
+            if (plsRepeat || false == _checkingTrack)
+            {
+                var repeat = SetInterval(GetCurrentTrack, 10000);
             }
         }
 
@@ -161,7 +179,7 @@ namespace JukeboxSpotify
             await _server.Stop();
         }
 
-        private async static Task RefreshSession()
+        private async static Task RefreshSession(bool plsRepeat = false)
         {
             var newResponse = await new OAuthClient().RequestToken(
               new AuthorizationCodeRefreshRequest(Variables._clientId, Variables._clientSecret, _refreshToken)
@@ -169,13 +187,13 @@ namespace JukeboxSpotify
 
             _spotify = new SpotifyClient(newResponse.AccessToken);
 
-            var _setRefresh = WaitForNextRefresh(newResponse.ExpiresIn - 50);
+            var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn - 50);
         }
 
-        private static async Task WaitForNextRefresh(int timeout = 36000 - 50)
+        private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 50)
         {
             await Task.Delay(timeout).ConfigureAwait(false);
-            var refresh = RefreshSession();
+            var run = method(true);
         }
     }
 }

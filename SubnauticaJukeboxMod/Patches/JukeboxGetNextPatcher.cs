@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using QModManager.Utility;
 using SpotifyAPI.Web;
 
 namespace JukeboxSpotify
@@ -8,14 +7,21 @@ namespace JukeboxSpotify
     class JukeboxGetNextPatcher
     {
         [HarmonyPostfix]
-        public async static void Postfix()
+        public async static void Postfix(JukeboxInstance jukebox, bool forward)
         {
-            Logger.Log(Logger.Level.Info, "Skipping track", null, true);
-            await Spotify._spotify.Player.SkipNext();
+            
+            if (forward)
+            {
+                await Spotify._spotify.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = Spotify._device.Id });
+            }
+            else
+            {
+                await Spotify._spotify.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = Spotify._device.Id });
+            }
+
             if (null == MainPatcher._isPlaying || false == MainPatcher._isPlaying)
             {
-                var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id };
-                await Spotify._spotify.Player.PausePlayback(playbackRequest);
+                await Spotify._spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id });
             }
         }
     }

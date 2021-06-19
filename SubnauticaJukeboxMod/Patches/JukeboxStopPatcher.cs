@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using QModManager.Utility;
 using SpotifyAPI.Web;
 
 namespace JukeboxSpotify
@@ -10,10 +9,10 @@ namespace JukeboxSpotify
         [HarmonyPostfix]
         public async static void Postfix()
         {
-            Logger.Log(Logger.Level.Info, "Pausing track", null, true);
             MainPatcher._isPlaying = null;
-            var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id };
-            await Spotify._spotify.Player.PausePlayback(playbackRequest);
+            MainPatcher._isPaused = false;
+            await Spotify._spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id });
+            await Spotify._spotify.Player.SeekTo(new PlayerSeekToRequest(0));
         }
     }
 }
