@@ -10,7 +10,7 @@ namespace JukeboxSpotify
         [HarmonyPostfix]
         public async static void Postfix()
         {
-            Logger.Log(Logger.Level.Info, "ALT+F4 detected, we pausin'", null, true);
+            Logger.Log(Logger.Level.Info, "Game shutting down, we pausin'", null, true);
             MainPatcher._isPlaying = null;
             var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id };
             await Spotify._spotify.Player.PausePlayback(playbackRequest);
