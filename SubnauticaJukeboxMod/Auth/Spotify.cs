@@ -53,7 +53,7 @@ namespace JukeboxSpotify
             }
             catch (Exception e)
             {
-                new ErrorHandler(e, "Something went wrong");
+                new ErrorHandler(e, "Something went wrong loading Spotify");
             }
         }
 

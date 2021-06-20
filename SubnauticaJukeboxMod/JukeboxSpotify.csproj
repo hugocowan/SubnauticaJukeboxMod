@@ -97,19 +97,13 @@
     <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Patches\JukeboxGetNextPatcher.cs" />
-    <Compile Include="Patches\JukeboxUpdateStudioPatcher.cs" />
-    <Compile Include="Patches\MusicManagerOnGameResumedPatcher.cs" />
-    <Compile Include="Patches\MusicManagerOnGamePausedPatcher.cs" />
-    <Compile Include="Patches\JukeboxOnApplicationQuitPatcher.cs" />
-    <Compile Include="Patches\PlayerAwakePatcher.cs" />
+    <Compile Include="Patches\PlayerPatcher.cs" />
+    <Compile Include="Patches\MusicManagerPatcher.cs" />
     <Compile Include="Auth\Spotify.cs" />
-    <Compile Include="Patches\JukeboxStopPatcher.cs" />
-    <Compile Include="Patches\JukeboxGetInfoPatcher.cs" />
+    <Compile Include="Patches\JukeboxPatcher.cs" />
     <Compile Include="Variables.cs" />
     <Compile Include="ErrorHandler.cs" />
     <Compile Include="Auth\Sql.cs" />
-    <Compile Include="Patches\JukeboxPlayPatcher.cs" />
     <Compile Include="Patches\MainPatcher.cs" />
     <None Include="App.config" />
     <None Include="mod.json" />
