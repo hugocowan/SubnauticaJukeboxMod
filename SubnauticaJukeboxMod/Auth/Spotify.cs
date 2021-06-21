@@ -13,7 +13,8 @@ namespace JukeboxSpotify
         public static string _refreshToken = null;
         public static Device _device = null;
         public static bool _checkingTrack = false;
-        public static bool _needsUpdating = false;
+        public static bool _jukeboxNeedsUpdating = false;
+        public static bool _jukeboxInstanceNeedsUpdating = false;
         public static string _currentTrackTitle = "Spotify Jukebox Mod";
         public static uint _currentTrackLength = 0;
         public static int _volume = 100;
@@ -51,7 +52,7 @@ namespace JukeboxSpotify
 
                 await GetDevice();
 
-                Logger.Log(Logger.Level.Info, "Spotify successfully loaded ", null, true);
+                Logger.Log(Logger.Level.Info, "Spotify successfully loaded", null, true);
 
                 await GetTrackInfo();
             }
@@ -99,14 +100,23 @@ namespace JukeboxSpotify
         // Update what's currently playing.
         public async static Task GetTrackInfo()
         {
-            Logger.Log(Logger.Level.Info, "Getting track info..." + _spotify.GetType(), null, true);
+            while (null == _spotify)
+            {
+                await Task.Delay(100);
+            }
 
-            var currentlyPlaying = await _spotify.Player.GetCurrentPlayback();
-            var currentTrack = (FullTrack) currentlyPlaying.Item;
+            try
+            {
+                var currentlyPlaying = await _spotify.Player.GetCurrentPlayback();
+                var currentTrack = (FullTrack) currentlyPlaying.Item;
 
-            _currentTrackTitle = currentTrack.Name;
-            _currentTrackLength = (uint) currentTrack.DurationMs;
-            _needsUpdating = true;
+                _currentTrackTitle = currentTrack.Name;
+                _currentTrackLength = (uint) currentTrack.DurationMs;
+                _jukeboxNeedsUpdating = true;
+            } catch(Exception e)
+            {
+                new ErrorHandler(e, "Something went wrong getting track info");
+            }
         }
 
         public async static Task RunServer()

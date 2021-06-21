@@ -1,7 +1,7 @@
 ﻿using HarmonyLib;
 using QModManager.Utility;
 using SpotifyAPI.Web;
-using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace JukeboxSpotify
@@ -9,23 +9,8 @@ namespace JukeboxSpotify
     [HarmonyPatch(typeof(Jukebox))]
     class JukeboxPatcher
     {
-        [HarmonyPostfix]
-        [HarmonyPatch("GetInfo", typeof(string))]
-        public static void GetInfoPostfix(string id, ref Jukebox.TrackInfo __result)
-        {
-            __result = new Jukebox.TrackInfo() { label = Spotify._currentTrackTitle, length = Spotify._currentTrackLength };
-        }
-
-        [HarmonyPrefix]
-        [HarmonyPatch("GetInfo", typeof(Jukebox.UnlockableTrack))]
-        public static bool GetInfo2Prefix(Jukebox.UnlockableTrack track, ref Jukebox.TrackInfo __result)
-        {
-            Logger.Log(Logger.Level.Info, "Other info method", null, true);
-
-            __result = new Jukebox.TrackInfo() { label = Spotify._currentTrackTitle, length = Spotify._currentTrackLength };
-
-            return false;
-        }
+        static AccessTools.FieldRef<Jukebox, List<string>> _playlistRef = AccessTools.FieldRefAccess<Jukebox, List<string>>("_playlist");
+        static AccessTools.FieldRef<Jukebox, string> _fileRef = AccessTools.FieldRefAccess<Jukebox, string>("_file");
 
         [HarmonyPostfix]
         [HarmonyPatch("GetNext")]
@@ -33,10 +18,12 @@ namespace JukeboxSpotify
         {
             if (forward)
             {
+                //Logger.Log(Logger.Level.Info, "Skip next track", null, true);
                 await Spotify._spotify.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = Spotify._device.Id });
             }
             else
             {
+                //Logger.Log(Logger.Level.Info, "Skip previous track", null, true);
                 await Spotify._spotify.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = Spotify._device.Id });
             }
 
@@ -63,6 +50,7 @@ namespace JukeboxSpotify
         [HarmonyPatch("Play")]
         public async static void PlayPostfix()
         {
+            //Logger.Log(Logger.Level.Info, "Hey, we are skipping to the next song", null, true);
             Jukebox.volume = 0;
 
             MainPatcher._isPlaying = true;
@@ -73,32 +61,37 @@ namespace JukeboxSpotify
         [HarmonyPatch("StopInternal")]
         public async static void StopInternalPostfix()
         {
+            //Logger.Log(Logger.Level.Info, "Stopping track", null, true);
             MainPatcher._isPlaying = null;
             MainPatcher._isPaused = false;
             await Spotify._spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id });
             await Spotify._spotify.Player.SeekTo(new PlayerSeekToRequest(0));
         }
 
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         [HarmonyPatch("UpdateStudio")]
-        public static void UpdateStudioPostfix(ref bool ____paused, ref string ____file)
+        public static void UpdateStudioPrefix(Jukebox __instance, ref bool ____paused, ref string ____file)
         {
             if (____paused && MainPatcher._isPaused == false)
             {
+                //Logger.Log(Logger.Level.Info, "Pausing track", null, true);
                 MainPatcher._isPaused = true;
                 Spotify._spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id });
             }
             else if (!____paused && true == MainPatcher._isPaused && true == MainPatcher._isPlaying)
             {
+                //Logger.Log(Logger.Level.Info, "Resuming track", null, true);
                 MainPatcher._isPaused = false;
                 Spotify._spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify._device.Id });
             }
 
-            if (Spotify._needsUpdating)
+            if (Spotify._jukeboxNeedsUpdating)
             {
-                Spotify._needsUpdating = false;
-                Logger.Log(Logger.Level.Info, "We are updating track info");
-                JukeboxInstance.NotifyInfo(____file, new Jukebox.TrackInfo() {  label = Spotify._currentTrackTitle, length = Spotify._currentTrackLength });
+                Spotify._jukeboxNeedsUpdating = false;
+                _playlistRef(__instance).Add(Spotify._currentTrackTitle);
+                _fileRef(__instance) = Spotify._currentTrackTitle;
+                Spotify._jukeboxInstanceNeedsUpdating = true;
+                JukeboxInstance.NotifyInfo(Spotify._currentTrackTitle, new Jukebox.TrackInfo() { label = Spotify._currentTrackTitle, length = Spotify._currentTrackLength });
             }
         }
 
