@@ -7,9 +7,6 @@ namespace JukeboxSpotify
     [QModCore]
     public class MainPatcher
     {
-        public static bool? _isPlaying = null;
-        public static bool _isPaused = false;
-
         [QModPatch]
         public static void Patch()
         {

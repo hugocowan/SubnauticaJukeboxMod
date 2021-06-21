@@ -8,26 +8,31 @@ namespace JukeboxSpotify
 {
     class Spotify
     {
-        public static EmbedIOAuthServer _server = null;
-        public static SpotifyClient _spotify = null;
-        public static string _refreshToken = null;
-        public static Device _device = null;
-        public static bool _checkingTrack = false;
-        public static bool _jukeboxNeedsUpdating = false;
-        public static bool _jukeboxInstanceNeedsUpdating = false;
-        public static string _currentTrackTitle = "Spotify Jukebox Mod";
-        public static uint _currentTrackLength = 0;
-        public static int _volume = 100;
+        private static EmbedIOAuthServer _server = null;
+        public static bool init = true;
+        public static bool? isPlaying = null;
+        public static bool isPaused = false;
+        public static bool repeatTrack = false;
+        public static bool playingOnStartup = false;
+        public static uint startingPosition = 0;
+        public static SpotifyClient client = null;
+        public static string refreshToken = null;
+        public static Device device = null;
+        public static bool checkingTrack = false;
+        public static bool jukeboxNeedsUpdating = false;
+        public static bool jukeboxInstanceNeedsUpdating = false;
+        public static string currentTrackTitle = "Spotify Jukebox Mod";
+        public static uint currentTrackLength = 0;
+        public static int volume = 100;
 
         public async static Task SpotifyLogin()
         {
-
             try
             {
                 // Check the database for a stored refresh token
-                _refreshToken = SQL.ReadData("SELECT * FROM Auth");
+                refreshToken = SQL.ReadData("SELECT * FROM Auth");
 
-                if (null != _refreshToken)
+                if (null != refreshToken)
                 {
                     try
                     {
@@ -44,8 +49,8 @@ namespace JukeboxSpotify
                     await RunServer();
                 }
 
-                // This while loop is to give time for the _spotify object to be fully initialised.
-                while (null == _spotify)
+                // This while loop is to give time for the client object to be fully initialised.
+                while (null == client)
                 {
                     await Task.Delay(1000);
                 }
@@ -70,7 +75,7 @@ namespace JukeboxSpotify
 
             try
             {
-                DeviceResponse devices = await _spotify.Player.GetAvailableDevices();
+                DeviceResponse devices = await client.Player.GetAvailableDevices();
                 bool foundActiveDevice = false;
                 int counter = 1;
 
@@ -90,7 +95,7 @@ namespace JukeboxSpotify
                 if (null == availableDevice && devices.Devices.Count > 0) availableDevice = devices.Devices[0];
 
 
-                _device = availableDevice;
+                device = availableDevice;
             }
             catch (Exception e)
             {
@@ -103,12 +108,18 @@ namespace JukeboxSpotify
         {
             try
             {
-                var currentlyPlaying = await _spotify.Player.GetCurrentPlayback();
+                var currentlyPlaying = await client.Player.GetCurrentPlayback();
                 var currentTrack = (FullTrack) currentlyPlaying.Item;
 
-                _currentTrackTitle = currentTrack.Name;
-                _currentTrackLength = (uint) currentTrack.DurationMs;
-                _jukeboxNeedsUpdating = true;
+                if (currentlyPlaying.IsPlaying && init)
+                {
+                    playingOnStartup = true;
+                    startingPosition = (uint) currentlyPlaying.ProgressMs;
+                }
+
+                currentTrackTitle = currentTrack.Name;
+                currentTrackLength = (uint) currentTrack.DurationMs;
+                jukeboxNeedsUpdating = true;
             } catch(Exception e)
             {
                 new ErrorHandler(e, "Something went wrong getting track info");
@@ -178,7 +189,7 @@ namespace JukeboxSpotify
                 .CreateDefault()
                 .WithAuthenticator(new AuthorizationCodeAuthenticator(Variables._clientId, Variables._clientSecret, tokenResponse));
 
-            _spotify = new SpotifyClient(config);
+            client = new SpotifyClient(config);
         }
 
         private static async Task OnErrorReceived(object sender, string error, string state)
@@ -190,10 +201,10 @@ namespace JukeboxSpotify
         private async static Task RefreshSession(bool plsRepeat = false)
         {
             var newResponse = await new OAuthClient().RequestToken(
-              new AuthorizationCodeRefreshRequest(Variables._clientId, Variables._clientSecret, _refreshToken)
+              new AuthorizationCodeRefreshRequest(Variables._clientId, Variables._clientSecret, refreshToken)
             );
 
-            _spotify = new SpotifyClient(newResponse.AccessToken);
+            client = new SpotifyClient(newResponse.AccessToken);
 
             var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn - 50);
         }

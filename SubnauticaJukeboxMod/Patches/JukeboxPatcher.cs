@@ -2,37 +2,43 @@
 using QModManager.Utility;
 using SpotifyAPI.Web;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace JukeboxSpotify
 {
     [HarmonyPatch(typeof(Jukebox))]
     class JukeboxPatcher
     {
-        static AccessTools.FieldRef<Jukebox, List<string>> _playlistRef = AccessTools.FieldRefAccess<Jukebox, List<string>>("_playlist");
-        static AccessTools.FieldRef<Jukebox, string> _fileRef = AccessTools.FieldRefAccess<Jukebox, string>("_file");
+        static AccessTools.FieldRef<Jukebox, List<string>> playlistRef = AccessTools.FieldRefAccess<Jukebox, List<string>>("_playlist");
 
         [HarmonyPostfix]
         [HarmonyPatch("GetNext")]
         public async static void GetNextPostfix(JukeboxInstance jukebox, bool forward)
         {
+            if (Spotify.repeatTrack)
+            {
+                await Spotify.client.Player.SeekTo(new PlayerSeekToRequest(0));
+                return;
+            }
+
+            await Spotify.client.Player.SetVolume(new PlayerVolumeRequest(0));
+            
             if (forward)
             {
                 //Logger.Log(Logger.Level.Info, "Skip next track", null, true);
-                await Spotify._spotify.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = Spotify._device.Id });
+                await Spotify.client.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = Spotify.device.Id });
             }
             else
             {
                 //Logger.Log(Logger.Level.Info, "Skip previous track", null, true);
-                await Spotify._spotify.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = Spotify._device.Id });
+                await Spotify.client.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = Spotify.device.Id });
             }
 
-            if (null == MainPatcher._isPlaying || false == MainPatcher._isPlaying)
+            if (true != Spotify.isPlaying)
             {
-                await Spotify._spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id });
+                await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
             }
 
-            await Task.Delay(1000);
+            await Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.volume));
             await Spotify.GetTrackInfo();
         }
 
@@ -41,9 +47,10 @@ namespace JukeboxSpotify
         [HarmonyPatch("OnApplicationQuit")]
         public async static void OnApplicationQuitPostfix()
         {
-            MainPatcher._isPlaying = null;
-            var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id };
-            await Spotify._spotify.Player.PausePlayback(playbackRequest);
+            if (Spotify.playingOnStartup) return;
+            Spotify.isPlaying = null;
+            var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id };
+            await Spotify.client.Player.PausePlayback(playbackRequest);
         }
 
         [HarmonyPostfix]
@@ -53,8 +60,15 @@ namespace JukeboxSpotify
             //Logger.Log(Logger.Level.Info, "Hey, we are skipping to the next song", null, true);
             Jukebox.volume = 0;
 
-            MainPatcher._isPlaying = true;
-            await Spotify._spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify._device.Id });
+            Spotify.isPlaying = true;
+
+            try
+            {
+                await Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify.device.Id });
+            } catch
+            {
+                //Logger.Log(Logger.Level.Info, "This fails when Spotify is already playing", null, true);
+            }
         }
 
         [HarmonyPostfix]
@@ -62,61 +76,41 @@ namespace JukeboxSpotify
         public async static void StopInternalPostfix()
         {
             //Logger.Log(Logger.Level.Info, "Stopping track", null, true);
-            MainPatcher._isPlaying = null;
-            MainPatcher._isPaused = false;
-            await Spotify._spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id });
-            await Spotify._spotify.Player.SeekTo(new PlayerSeekToRequest(0));
+            Spotify.isPlaying = null;
+            Spotify.isPaused = false;
+            await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
+            await Spotify.client.Player.SeekTo(new PlayerSeekToRequest(0));
         }
 
         [HarmonyPrefix]
         [HarmonyPatch("UpdateStudio")]
-        public static void UpdateStudioPrefix(Jukebox __instance, ref bool ____paused, ref string ____file)
+        public static void UpdateStudioPrefix(Jukebox __instance, ref bool ____paused, ref string ____file, ref uint ____length)
         {
-            if (____paused && MainPatcher._isPaused == false)
+            ____length = Spotify.currentTrackLength;
+
+            if (____paused && Spotify.isPaused == false)
             {
                 //Logger.Log(Logger.Level.Info, "Pausing track", null, true);
-                MainPatcher._isPaused = true;
-                Spotify._spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id });
+                Spotify.isPaused = true;
+                Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
             }
-            else if (!____paused && true == MainPatcher._isPaused && true == MainPatcher._isPlaying)
+            else if (!____paused && true == Spotify.isPaused && true == Spotify.isPlaying)
             {
                 //Logger.Log(Logger.Level.Info, "Resuming track", null, true);
-                MainPatcher._isPaused = false;
-                Spotify._spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify._device.Id });
+                Spotify.isPaused = false;
+                Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify.device.Id });
             }
 
-            if (Spotify._jukeboxNeedsUpdating)
+            if (Spotify.jukeboxNeedsUpdating)
             {
-                Spotify._jukeboxNeedsUpdating = false;
-                _playlistRef(__instance).Add(Spotify._currentTrackTitle);
-                _fileRef(__instance) = Spotify._currentTrackTitle;
-                Spotify._jukeboxInstanceNeedsUpdating = true;
-                JukeboxInstance.NotifyInfo(Spotify._currentTrackTitle, new Jukebox.TrackInfo() { label = Spotify._currentTrackTitle, length = Spotify._currentTrackLength });
+                Spotify.jukeboxNeedsUpdating = false;
+                playlistRef(__instance).Add(Spotify.currentTrackTitle);
+                ____file = Spotify.currentTrackTitle;
+                
+                Spotify.jukeboxInstanceNeedsUpdating = true;
+                JukeboxInstance.NotifyInfo(Spotify.currentTrackTitle, new Jukebox.TrackInfo() { label = Spotify.currentTrackTitle, length = Spotify.currentTrackLength });
             }
+
         }
-
-        //var newSongRequest = new PlayerAddToQueueRequest("spotify:track:" + track.Id) { DeviceId = availableDevice.Id };
-        //await Spotify._spotify.Player.AddToQueue(newSongRequest);
-
-        //private async static Task PlayTrack()
-        //{
-        //var track = await Spotify._spotify.Tracks.Get("4iV5W9uYEdYUVa79Axb7Rh");
-
-        //// Add a song to the device's queue.
-
-        //    // Skip tracks until we are at the first one.
-        //    // This effectively clears the old queue, which is not currently a feature.
-        //    while (track.Id != currentTrack.Id)
-        //    {
-        //        // Skip the current song if it's not the one we want.
-        //        await Spotify._spotify.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = Spotify._device.Id });
-
-        //        // We need this delay or else the song we want can get skipped.
-        //        await Task.Delay(250);
-
-        //        // Update what's currently playing.
-        //        currentlyPlaying = await Spotify._spotify.Player.GetCurrentPlayback();
-        //        currentTrack = (FullTrack)currentlyPlaying.Item;
-        //    }
     }
 }
