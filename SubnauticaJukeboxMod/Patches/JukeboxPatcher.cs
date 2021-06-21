@@ -1,6 +1,8 @@
 ﻿using HarmonyLib;
 using QModManager.Utility;
 using SpotifyAPI.Web;
+using System;
+using System.Threading.Tasks;
 
 namespace JukeboxSpotify
 {
@@ -11,22 +13,24 @@ namespace JukeboxSpotify
         [HarmonyPatch("GetInfo", typeof(string))]
         public static void GetInfoPostfix(string id, ref Jukebox.TrackInfo __result)
         {
-            //Logger.Log(Logger.Level.Info, "id: " + id + " | info.label: " + info.label + " | info.length: " + info.length, null, true);
-            //Logger.Log(Logger.Level.Info, "id: " + id, null, true);
-            //Logger.Log(Logger.Level.Info, "old result.label: " + __result.label, null, true);
-            //Logger.Log(Logger.Level.Info, "old result.length: " + __result.length, null, true);
+            __result = new Jukebox.TrackInfo() { label = Spotify._currentTrackTitle, length = Spotify._currentTrackLength };
+        }
 
-            __result = new Jukebox.TrackInfo() { label = MainPatcher._currentTrackTitle, length = MainPatcher._currentTrackLength };
+        [HarmonyPrefix]
+        [HarmonyPatch("GetInfo", typeof(Jukebox.UnlockableTrack))]
+        public static bool GetInfo2Prefix(Jukebox.UnlockableTrack track, ref Jukebox.TrackInfo __result)
+        {
+            Logger.Log(Logger.Level.Info, "Other info method", null, true);
 
-            //Logger.Log(Logger.Level.Info, "new result.label: " + __result.label, null, true);
-            //Logger.Log(Logger.Level.Info, "new result.length: " + __result.length, null, true);
+            __result = new Jukebox.TrackInfo() { label = Spotify._currentTrackTitle, length = Spotify._currentTrackLength };
+
+            return false;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("GetNext")]
         public async static void GetNextPostfix(JukeboxInstance jukebox, bool forward)
         {
-
             if (forward)
             {
                 await Spotify._spotify.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = Spotify._device.Id });
@@ -40,6 +44,9 @@ namespace JukeboxSpotify
             {
                 await Spotify._spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify._device.Id });
             }
+
+            await Task.Delay(1000);
+            await Spotify.GetTrackInfo();
         }
 
 
@@ -74,7 +81,7 @@ namespace JukeboxSpotify
 
         [HarmonyPostfix]
         [HarmonyPatch("UpdateStudio")]
-        public static void UpdateStudioPostfix(ref bool ____paused)
+        public static void UpdateStudioPostfix(ref bool ____paused, ref string ____file)
         {
             if (____paused && MainPatcher._isPaused == false)
             {
@@ -86,21 +93,23 @@ namespace JukeboxSpotify
                 MainPatcher._isPaused = false;
                 Spotify._spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify._device.Id });
             }
+
+            if (Spotify._needsUpdating)
+            {
+                Spotify._needsUpdating = false;
+                Logger.Log(Logger.Level.Info, "We are updating track info");
+                JukeboxInstance.NotifyInfo(____file, new Jukebox.TrackInfo() {  label = Spotify._currentTrackTitle, length = Spotify._currentTrackLength });
+            }
         }
+
+        //var newSongRequest = new PlayerAddToQueueRequest("spotify:track:" + track.Id) { DeviceId = availableDevice.Id };
+        //await Spotify._spotify.Player.AddToQueue(newSongRequest);
 
         //private async static Task PlayTrack()
         //{
         //var track = await Spotify._spotify.Tracks.Get("4iV5W9uYEdYUVa79Axb7Rh");
 
-        // Add a song to the device's queue.
-        //var newSongRequest = new PlayerAddToQueueRequest("spotify:track:" + track.Id) { DeviceId = availableDevice.Id };
-
-        //await Spotify._spotify.Player.AddToQueue(newSongRequest);
-
-        //try
-        //{
-        //    CurrentlyPlayingContext currentlyPlaying = await Spotify._spotify.Player.GetCurrentPlayback();
-        //    FullTrack currentTrack = (FullTrack)currentlyPlaying.Item;
+        //// Add a song to the device's queue.
 
         //    // Skip tracks until we are at the first one.
         //    // This effectively clears the old queue, which is not currently a feature.
@@ -116,17 +125,5 @@ namespace JukeboxSpotify
         //        currentlyPlaying = await Spotify._spotify.Player.GetCurrentPlayback();
         //        currentTrack = (FullTrack)currentlyPlaying.Item;
         //    }
-
-        //}
-        //catch (Exception e)
-        //{
-        //    new ErrorHandler(e, "Skipping song went wrong");
-        //}
-
-
-
-        // Play the song.
-
-        //}
     }
 }

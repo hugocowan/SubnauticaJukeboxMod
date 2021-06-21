@@ -9,8 +9,6 @@ namespace JukeboxSpotify
     {
         public static bool? _isPlaying = null;
         public static bool _isPaused = false;
-        public static string _currentTrackTitle = "Spotify Jukebox Mod";
-        public static uint _currentTrackLength = 0;
 
         [QModPatch]
         public static void Patch()

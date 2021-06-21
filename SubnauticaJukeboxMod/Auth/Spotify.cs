@@ -13,6 +13,10 @@ namespace JukeboxSpotify
         public static string _refreshToken = null;
         public static Device _device = null;
         public static bool _checkingTrack = false;
+        public static bool _needsUpdating = false;
+        public static string _currentTrackTitle = "Spotify Jukebox Mod";
+        public static uint _currentTrackLength = 0;
+        public static int _volume = 100;
 
         public async static Task SpotifyLogin()
         {
@@ -49,7 +53,7 @@ namespace JukeboxSpotify
 
                 Logger.Log(Logger.Level.Info, "Spotify successfully loaded ", null, true);
 
-                await GetCurrentTrack();
+                await GetTrackInfo();
             }
             catch (Exception e)
             {
@@ -93,18 +97,16 @@ namespace JukeboxSpotify
         }
 
         // Update what's currently playing.
-        public async static Task GetCurrentTrack(bool plsRepeat = false)
+        public async static Task GetTrackInfo()
         {
+            Logger.Log(Logger.Level.Info, "Getting track info..." + _spotify.GetType(), null, true);
+
             var currentlyPlaying = await _spotify.Player.GetCurrentPlayback();
             var currentTrack = (FullTrack) currentlyPlaying.Item;
 
-            MainPatcher._currentTrackTitle = currentTrack.Name;
-            MainPatcher._currentTrackLength = (uint) currentTrack.DurationMs;
-
-            if (plsRepeat || false == _checkingTrack)
-            {
-                var repeat = SetInterval(GetCurrentTrack, 10000);
-            }
+            _currentTrackTitle = currentTrack.Name;
+            _currentTrackLength = (uint) currentTrack.DurationMs;
+            _needsUpdating = true;
         }
 
         public async static Task RunServer()
