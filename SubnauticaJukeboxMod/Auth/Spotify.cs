@@ -52,9 +52,10 @@ namespace JukeboxSpotify
 
                 await GetDevice();
 
+                await Retry.Do(() => GetTrackInfo(), TimeSpan.FromSeconds(1));
+
                 Logger.Log(Logger.Level.Info, "Spotify successfully loaded", null, true);
 
-                await GetTrackInfo();
             }
             catch (Exception e)
             {
@@ -100,11 +101,6 @@ namespace JukeboxSpotify
         // Update what's currently playing.
         public async static Task GetTrackInfo()
         {
-            while (null == _spotify)
-            {
-                await Task.Delay(100);
-            }
-
             try
             {
                 var currentlyPlaying = await _spotify.Player.GetCurrentPlayback();

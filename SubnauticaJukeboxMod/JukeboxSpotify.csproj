@@ -40,6 +40,9 @@
     <Reference Include="Assembly-CSharp">
       <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\SubnauticaZero\SubnauticaZero_Data\Managed\Assembly-CSharp.dll</HintPath>
     </Reference>
+    <Reference Include="DebounceThrottle, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\DebounceThrottle.1.0.0\lib\netstandard2.0\DebounceThrottle.dll</HintPath>
+    </Reference>
     <Reference Include="EmbedIO, Version=3.4.3.0, Culture=neutral, PublicKeyToken=5e5f048b6e04267e, processorArchitecture=MSIL">
       <HintPath>..\packages\EmbedIO.3.4.3\lib\netstandard2.0\EmbedIO.dll</HintPath>
     </Reference>
@@ -102,8 +105,9 @@
     <Compile Include="Patches\MusicManagerPatcher.cs" />
     <Compile Include="Auth\Spotify.cs" />
     <Compile Include="Patches\JukeboxPatcher.cs" />
+    <Compile Include="Helpers\Retry.cs" />
     <Compile Include="Variables.cs" />
-    <Compile Include="ErrorHandler.cs" />
+    <Compile Include="Helpers\ErrorHandler.cs" />
     <Compile Include="Auth\Sql.cs" />
     <Compile Include="Patches\MainPatcher.cs" />
     <None Include="App.config" />
