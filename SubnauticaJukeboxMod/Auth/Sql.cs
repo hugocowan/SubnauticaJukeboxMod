@@ -1,16 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SQLite;
 
 namespace JukeboxSpotify
 {
     class SQL
     {
-        public static SQLiteConnection _conn { get; private set; }
+        public static SQLiteConnection Conn { get; private set; }
 
         public SQL()
         {
-            _conn = CreateConnection();
-            CreateTable();
+            Conn = CreateConnection();
+            CreateTables();
         }
 
         public static SQLiteConnection CreateConnection()
@@ -32,13 +33,15 @@ namespace JukeboxSpotify
             return conn;
         }
 
-        public static void CreateTable()
+        public static void CreateTables()
         {
-            SQLiteCommand cmd = _conn.CreateCommand();
+            SQLiteCommand cmd = Conn.CreateCommand();
 
             try
             {
                 cmd.CommandText = "CREATE TABLE IF NOT EXISTS Auth (id INTEGER PRIMARY KEY, authorization_code VARCHAR(64) NULL, access_token VARCHAR(64) NULL, refresh_token VARCHAR(64) NULL, expires_in INT NULL)";
+                cmd.ExecuteNonQuery();
+                cmd.CommandText = "CREATE TABLE IF NOT EXISTS Device (id INTEGER PRIMARY KEY, device_id VARCHAR(64) NULL, device_name VARCHAR(64) NULL)";
                 cmd.ExecuteNonQuery();
             } catch(Exception e)
             {
@@ -50,7 +53,7 @@ namespace JukeboxSpotify
 
         public static void QueryTable(string query)
         {
-            SQLiteCommand cmd = _conn.CreateCommand();
+            SQLiteCommand cmd = Conn.CreateCommand();
 
             try
             {
@@ -64,21 +67,30 @@ namespace JukeboxSpotify
             
         }
 
-        public static string ReadData(string query)
+        public static List<string> ReadData(string query, string type = "refreshToken")
         {
-            SQLiteCommand cmd = _conn.CreateCommand();
+            SQLiteCommand cmd = Conn.CreateCommand();
             cmd.CommandText = query;
 
-            string refreshToken = null;
+            List<string> results = null;
 
             var reader = cmd.ExecuteReader();
 
             while (reader.Read())
             {
-                refreshToken = reader.GetString(3);
+                switch(type)
+                {
+                    case "refreshToken":
+                        results = new List<string> { reader.GetString(3) };
+                        break;
+                    case "device":
+                        results = new List<string>() { reader.GetString(1), reader.GetString(2) };
+                        break;
+                }
+                
             }
 
-            return refreshToken;
+            return results;
         }
     }
 }

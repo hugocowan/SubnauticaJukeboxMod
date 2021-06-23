@@ -1,28 +1,31 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using DebounceThrottle;
+using QModManager.Utility;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
-using QModManager.Utility;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace JukeboxSpotify
 {
     class Spotify
     {
         private static EmbedIOAuthServer _server = null;
-        public static bool init = true;
+        public static DebounceDispatcher trackDebouncer = new DebounceDispatcher(1000);
         public static bool? isPlaying = null;
         public static bool isPaused = false;
         public static bool repeatTrack = false;
         public static bool playingOnStartup = false;
+        public static bool isCurrentlyPlaying = false;
         public static uint startingPosition = 0;
         public static SpotifyClient client = null;
         public static string refreshToken = null;
         public static Device device = null;
-        public static bool checkingTrack = false;
         public static bool jukeboxNeedsUpdating = false;
-        public static bool jukeboxInstanceNeedsUpdating = false;
+        public static bool jukeboxNeedsPlaying = false;
         public static string currentTrackTitle = "Spotify Jukebox Mod";
         public static uint currentTrackLength = 0;
+        public static float timeTrackStarted = 0;
         public static int volume = 100;
 
         public async static Task SpotifyLogin()
@@ -30,7 +33,12 @@ namespace JukeboxSpotify
             try
             {
                 // Check the database for a stored refresh token
-                refreshToken = SQL.ReadData("SELECT * FROM Auth");
+                List<string> result = SQL.ReadData("SELECT * FROM Auth");
+
+                if (null != result && result.Count > 0)
+                {
+                    refreshToken = result[0];
+                }
 
                 if (null != refreshToken)
                 {
@@ -57,7 +65,7 @@ namespace JukeboxSpotify
 
                 await GetDevice();
 
-                await Retry.Do(() => GetTrackInfo(), TimeSpan.FromSeconds(1));
+                await Retry.Do(() => GetTrackInfo(true), TimeSpan.FromSeconds(1));
 
                 Logger.Log(Logger.Level.Info, "Spotify successfully loaded", null, true);
 
@@ -70,30 +78,47 @@ namespace JukeboxSpotify
 
         public async static Task GetDevice()
         {
-            // Get an available device to play songs with.
+            // Get an available device to play tracks with.
             Device availableDevice = null;
 
             try
             {
                 DeviceResponse devices = await client.Player.GetAvailableDevices();
                 bool foundActiveDevice = false;
-                int counter = 1;
+
+                List<string> result = SQL.ReadData("SELECT * FROM Device", "device");
+
+                if (result != null && result.Count > 0)
+                {
+                    availableDevice = new Device() { Id = result[0], Name = result[1] };
+                    Logger.Log(Logger.Level.Info, "Pre-loaded latest device from database in case we need it: " + availableDevice.Name, null, false);
+                }
 
                 devices.Devices.ForEach(delegate (Device device)
                 {
                     // Find the first active device.
-                    if (false == foundActiveDevice && device.IsActive)
+                    if (
+                        false == foundActiveDevice && device.IsActive &&
+                        (null == availableDevice || (null != availableDevice && availableDevice.Id != device.Id))
+                    )
                     {
                         availableDevice = device;
                         foundActiveDevice = true;
-                    }
 
-                    counter++;
+                        SQL.QueryTable("INSERT INTO Device (device_id, device_name) VALUES(" +
+                            "'" + availableDevice.Id + "'," +
+                            "'" + availableDevice.Name + "'" +
+                        ")");
+                    }
                 });
 
                 // If no active device was found, choose the first one in the devices list.
-                if (null == availableDevice && devices.Devices.Count > 0) availableDevice = devices.Devices[0];
+                if (null == availableDevice)
+                {
+                    Logger.Log(Logger.Level.Info, "No Spotify device found. Please play/pause your spotify client and reload your game.", null, true);
 
+                    return;
+                }
 
                 device = availableDevice;
             }
@@ -104,19 +129,23 @@ namespace JukeboxSpotify
         }
 
         // Update what's currently playing.
-        public async static Task GetTrackInfo()
+        public async static Task GetTrackInfo(bool plsRepeat = false)
         {
             try
             {
                 var currentlyPlaying = await client.Player.GetCurrentPlayback();
-                var currentTrack = (FullTrack) currentlyPlaying.Item;
-
-                if (currentlyPlaying.IsPlaying && init)
+                
+                if (null == currentlyPlaying)
                 {
-                    playingOnStartup = true;
-                    startingPosition = (uint) currentlyPlaying.ProgressMs;
+                    Logger.Log(Logger.Level.Info, "No track currently playing", null, false);
+                    return;
                 }
 
+                var currentTrack = (FullTrack) currentlyPlaying.Item;
+
+                if (currentTrackTitle == "Spotify Jukebox Mod") playingOnStartup = currentlyPlaying.IsPlaying;
+                isCurrentlyPlaying = currentlyPlaying.IsPlaying;
+                startingPosition = (uint) currentlyPlaying.ProgressMs;
                 currentTrackTitle = currentTrack.Name;
                 currentTrackLength = (uint) currentTrack.DurationMs;
                 jukeboxNeedsUpdating = true;
@@ -124,6 +153,8 @@ namespace JukeboxSpotify
             {
                 new ErrorHandler(e, "Something went wrong getting track info");
             }
+
+            if (plsRepeat) _ = SetInterval(GetTrackInfo, 4000, true);
         }
 
         public async static Task RunServer()
@@ -209,10 +240,10 @@ namespace JukeboxSpotify
             var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn - 50);
         }
 
-        private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 50)
+        private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 50, bool isTrackInfo = false)
         {
             await Task.Delay(timeout).ConfigureAwait(false);
-            var run = method(true);
+            var run = isTrackInfo ? trackDebouncer.DebounceAsync(() => GetTrackInfo()) : method(true);
         }
     }
 }

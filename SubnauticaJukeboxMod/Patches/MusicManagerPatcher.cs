@@ -13,7 +13,7 @@ namespace JukeboxSpotify
         {
             if (true == Spotify.isPlaying)
             {
-                Logger.Log(Logger.Level.Info, "Game paused, pausing track", null, true);
+                //Logger.Log(Logger.Level.Info, "Game paused, pausing track", null, true);
                 Spotify.isPlaying = false;
                 await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
             }
@@ -25,7 +25,7 @@ namespace JukeboxSpotify
         {
             if (false == Spotify.isPlaying)
             {
-                Logger.Log(Logger.Level.Info, "Game resumed, resuming track", null, true);
+                //Logger.Log(Logger.Level.Info, "Game resumed, resuming track", null, true);
                 Spotify.isPlaying = true;
                 await Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify.device.Id });
             }
