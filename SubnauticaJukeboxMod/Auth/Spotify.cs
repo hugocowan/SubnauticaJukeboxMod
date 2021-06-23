@@ -17,6 +17,7 @@ namespace JukeboxSpotify
         public static bool repeatTrack = false;
         public static bool playingOnStartup = false;
         public static bool isCurrentlyPlaying = false;
+        public static bool justStarted = true;
         public static uint startingPosition = 0;
         public static SpotifyClient client = null;
         public static string refreshToken = null;
@@ -26,6 +27,7 @@ namespace JukeboxSpotify
         public static string currentTrackTitle = "Spotify Jukebox Mod";
         public static uint currentTrackLength = 0;
         public static float timeTrackStarted = 0;
+        public static uint timelinePosition = 0;
         public static int volume = 100;
 
         public async static Task SpotifyLogin()
@@ -121,6 +123,8 @@ namespace JukeboxSpotify
                 }
 
                 device = availableDevice;
+
+                await Spotify.client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { device.Id }));
             }
             catch (Exception e)
             {
@@ -135,13 +139,14 @@ namespace JukeboxSpotify
             {
                 var currentlyPlaying = await client.Player.GetCurrentPlayback();
                 
-                if (null == currentlyPlaying)
+                if (null == currentlyPlaying || null == currentlyPlaying.Item)
                 {
                     Logger.Log(Logger.Level.Info, "No track currently playing", null, false);
                     return;
                 }
 
                 var currentTrack = (FullTrack) currentlyPlaying.Item;
+                Logger.Log(Logger.Level.Info, "Current track: " + currentTrack.Name, null, true);
 
                 if (currentTrackTitle == "Spotify Jukebox Mod") playingOnStartup = currentlyPlaying.IsPlaying;
                 isCurrentlyPlaying = currentlyPlaying.IsPlaying;
@@ -154,7 +159,7 @@ namespace JukeboxSpotify
                 new ErrorHandler(e, "Something went wrong getting track info");
             }
 
-            if (plsRepeat) _ = SetInterval(GetTrackInfo, 4000, true);
+            if (plsRepeat) _ = SetInterval(GetTrackInfo, 5000);
         }
 
         public async static Task RunServer()
@@ -240,10 +245,10 @@ namespace JukeboxSpotify
             var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn - 50);
         }
 
-        private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 50, bool isTrackInfo = false)
+        private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 50)
         {
             await Task.Delay(timeout).ConfigureAwait(false);
-            var run = isTrackInfo ? trackDebouncer.DebounceAsync(() => GetTrackInfo()) : method(true);
+            var run = method(true);
         }
     }
 }

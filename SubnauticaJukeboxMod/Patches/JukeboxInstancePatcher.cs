@@ -29,16 +29,17 @@ namespace JukeboxSpotify
 
         [HarmonyPrefix]
         [HarmonyPatch("UpdateUI")]
-        static void UpdateUIPrefix(JukeboxInstance __instance)
+        static void UpdateUIPrefix(JukeboxInstance __instance, ref float ____position)
         {
-            if (
-                (Spotify.jukeboxNeedsPlaying) //|| (Spotify.isCurrentlyPlaying && !Jukebox.isStartingOrPlaying)
-                && null != __instance
-                )
+            if (Spotify.jukeboxNeedsPlaying && Spotify.justStarted && null != __instance)
             {
                 Spotify.jukeboxNeedsPlaying = false;
+                Spotify.justStarted = false;
                 Jukebox.Play(__instance);
             }
+
+            //_positionRef(__instance) = (float) Spotify.timelinePosition / (float) Spotify.currentTrackLength;
+            //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "_positionRef after: " + _positionRef(__instance), null, true);
         }
 
         [HarmonyPostfix]
@@ -99,6 +100,21 @@ namespace JukeboxSpotify
                 Spotify.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = Spotify.device.Id });
                 Spotify.timeTrackStarted = Time.time - trackPosition / 1000;
             }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("OnButtonPlayPause")]
+        public static bool OnButtonPlayPausePreFix(JukeboxInstance __instance, ref string ____file)
+        {
+            if (____file != Spotify.currentTrackTitle) ____file = Spotify.currentTrackTitle;
+            if (!Jukebox.HasFile(____file))
+            {
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Jukebox doesn't have our track D:", null, true);
+                Jukebox.Play(__instance);
+                return false;
+            }
+
+            return true;
         }
     }
 

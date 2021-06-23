@@ -99,6 +99,7 @@ namespace JukeboxSpotify
         [HarmonyPatch("UpdateStudio")]
         public static void UpdateStudioPrefix(Jukebox __instance, ref bool ____paused, ref uint ____length, ref string ____file, ref uint ____position, ref JukeboxInstance ____instance)
         {
+            _lengthRef(__instance) = Spotify.currentTrackLength;
 
             if (Spotify.jukeboxNeedsUpdating)
             {
@@ -107,23 +108,31 @@ namespace JukeboxSpotify
                 
                 // Not sure how necessary these two are.
                 _fileRef(__instance) = Spotify.currentTrackTitle;
-                _lengthRef(__instance) = Spotify.currentTrackLength;
+
+                Spotify.timeTrackStarted = Time.time - Spotify.startingPosition / 1000;
+                Jukebox.position = (uint)(Time.time - Spotify.timeTrackStarted) * 1000;
 
                 // This is the part that actually updates the track info.
                 if (null != ____instance && ____instance.file != Spotify.currentTrackTitle)
                 {
                     ____instance.file = Spotify.currentTrackTitle;
                     JukeboxInstance.NotifyInfo(Spotify.currentTrackTitle, new Jukebox.TrackInfo() { label = Spotify.currentTrackTitle, length = Spotify.currentTrackLength });
+                    
                 }
-                Spotify.timeTrackStarted = Time.time - Spotify.startingPosition / 1000;
+                
+                //____position = (uint)(Time.time - Spotify.timeTrackStarted) * 1000;
 
-                if (Spotify.startingPosition > 0 && Spotify.playingOnStartup)
-                {
-                    Spotify.jukeboxNeedsPlaying = true;
-                }
+
+                //if (Spotify.justStarted && Spotify.playingOnStartup && Spotify.startingPosition > 0)
+                //{
+                //    Spotify.jukeboxNeedsPlaying = true;
+                //}
             }
 
-            if (!____paused && true == Spotify.isPlaying) ____position = (uint)(Time.time - Spotify.timeTrackStarted) * 1000;
+            //if (!____paused && true == Spotify.isPlaying) ____position = (uint)(Time.time - Spotify.timeTrackStarted) * 1000;
+            
+
+            //Spotify.timelinePosition = ____position;
 
             //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "____position: " + ____position + " | Spotify.timeTrackStarted: " + Spotify.timeTrackStarted, null, true);
 
