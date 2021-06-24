@@ -1,6 +1,6 @@
 ﻿using HarmonyLib;
 
-namespace JukeboxSpotify.Patches
+namespace JukeboxSpotify
 {
     [HarmonyPatch(typeof(Player))]
     class PlayerPatcher

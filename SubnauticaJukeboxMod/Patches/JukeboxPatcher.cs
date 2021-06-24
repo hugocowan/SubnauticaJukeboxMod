@@ -95,57 +95,61 @@ namespace JukeboxSpotify
             Spotify.startingPosition = 0;
         }
 
+        [HarmonyPostfix]
+        [HarmonyPatch("HandleOpenError")]
+        public static void HandleOpenErrorPostfix(ref int ____failed)
+        {
+            QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "We have an open error D: this._failed: " + ____failed, null, true);
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch("UpdateLowLevel")]
+        public static void UpdateLowLevelPrefix(ref string ____file)
+        {
+            ____file = "event:/jukebox/jukebox_one"; // This avoids errors and generally makes the jukebox very, Very happy.
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch("UpdateStudio")]
-        public static void UpdateStudioPrefix(Jukebox __instance, ref bool ____paused, ref uint ____length, ref string ____file, ref uint ____position, ref JukeboxInstance ____instance)
+        public static void UpdateStudioPrefix(Jukebox __instance, ref bool ____paused, ref JukeboxInstance ____instance)
         {
-            _lengthRef(__instance) = Spotify.currentTrackLength;
-
-            if (Spotify.jukeboxNeedsUpdating)
+            if (Jukebox.isStartingOrPlaying && Spotify.jukeboxNeedsUpdating)
             {
+                if (!_playlistRef(__instance).Contains(Spotify.currentTrackTitle)) _playlistRef(__instance).Add(Spotify.currentTrackTitle);
+
+                //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Update Jukebox. file: " + _fileRef(__instance), null, true);
                 Spotify.jukeboxNeedsUpdating = false;
-                _playlistRef(__instance).Add(Spotify.currentTrackTitle); // might be adding over and over again, maybe. Need to check
-                
-                // Not sure how necessary these two are.
-                _fileRef(__instance) = Spotify.currentTrackTitle;
+
+                // This makes sure the timeline length is right.
+                _lengthRef(__instance) = Spotify.currentTrackLength;
 
                 Spotify.timeTrackStarted = Time.time - Spotify.startingPosition / 1000;
                 Jukebox.position = (uint)(Time.time - Spotify.timeTrackStarted) * 1000;
 
-                // This is the part that actually updates the track info.
+                // This updates the track label.
                 if (null != ____instance && ____instance.file != Spotify.currentTrackTitle)
                 {
                     ____instance.file = Spotify.currentTrackTitle;
-                    JukeboxInstance.NotifyInfo(Spotify.currentTrackTitle, new Jukebox.TrackInfo() { label = Spotify.currentTrackTitle, length = Spotify.currentTrackLength });
-                    
                 }
-                
-                //____position = (uint)(Time.time - Spotify.timeTrackStarted) * 1000;
 
-
-                //if (Spotify.justStarted && Spotify.playingOnStartup && Spotify.startingPosition > 0)
-                //{
-                //    Spotify.jukeboxNeedsPlaying = true;
-                //}
+                if (Spotify.justStarted && Spotify.playingOnStartup && Spotify.startingPosition > 0)
+                {
+                    Spotify.jukeboxNeedsPlaying = true;
+                }
             }
 
-            //if (!____paused && true == Spotify.isPlaying) ____position = (uint)(Time.time - Spotify.timeTrackStarted) * 1000;
-            
+            //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "____paused: " + ____paused, null, true);
 
-            //Spotify.timelinePosition = ____position;
-
-            //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "____position: " + ____position + " | Spotify.timeTrackStarted: " + Spotify.timeTrackStarted, null, true);
-
-            if (____paused && Spotify.isPaused == false)
+            if (____paused && false == Spotify.isPaused)
             {
-                //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Pause track", null, true);
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Pause track", null, true);
                 Spotify.isPaused = true;
                 Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
                 Spotify.isCurrentlyPlaying = false;
             }
             else if (!____paused && true == Spotify.isPaused && true == Spotify.isPlaying)
             {
-                //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Resume track", null, true);
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Resume track", null, true);
                 Spotify.isPaused = false;
                 Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify.device.Id });
                 Spotify.isCurrentlyPlaying = true;
