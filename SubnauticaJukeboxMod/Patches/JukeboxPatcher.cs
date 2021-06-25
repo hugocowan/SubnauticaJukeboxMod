@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using SMLHelper.V2.Handlers;
 using SpotifyAPI.Web;
 using UnityEngine;
 
@@ -54,13 +53,13 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(Jukebox.OnApplicationQuit))]
         public static void OnApplicationQuitPostfix()
         {
+            Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100));
             Spotify.trackDebouncer.Debounce(() => { }); // Clear the debouncer
-            _ = Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100));
             SQL.Conn.Close();
             if (Spotify.playingOnStartup) return;
             Spotify.isPlaying = null;
             var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id };
-            _ = Spotify.client.Player.PausePlayback(playbackRequest);
+            Spotify.client.Player.PausePlayback(playbackRequest);
         }
 
         [HarmonyPostfix]
