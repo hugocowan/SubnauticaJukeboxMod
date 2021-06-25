@@ -8,11 +8,8 @@ namespace JukeboxSpotify
     [HarmonyPatch(typeof(JukeboxInstance))]
     class JukeboxInstancePatcher
     {
-        private static AccessTools.FieldRef<JukeboxInstance, float> _positionRef = AccessTools.FieldRefAccess<JukeboxInstance, float>("_position");
-        private static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(100);
-
         [HarmonyPrefix]
-        [HarmonyPatch("SetLabel")]
+        [HarmonyPatch(nameof(JukeboxInstance.SetLabel))]
         static void SetLabelPrefix(ref string text)
         {
             text = Spotify.currentTrackTitle;
@@ -20,7 +17,7 @@ namespace JukeboxSpotify
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch("SetLength")]
+        [HarmonyPatch(nameof(JukeboxInstance.SetLength))]
         static void SetLengthPrefix(ref uint length)
         {
             length = Spotify.currentTrackLength;
@@ -28,7 +25,7 @@ namespace JukeboxSpotify
         }
 
         [HarmonyPrefix]
-        [HarmonyPatch("UpdateUI")]
+        [HarmonyPatch(nameof(JukeboxInstance.UpdateUI))]
         static void UpdateUIPrefix(JukeboxInstance __instance)
         {
             if (Spotify.jukeboxNeedsPlaying && Spotify.justStarted && null != __instance)
@@ -41,34 +38,33 @@ namespace JukeboxSpotify
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch("OnVolume")]
-        public static void OnVolumePostfix(float ___volume)
+        [HarmonyPatch(nameof(JukeboxInstance.OnVolume))]
+        public static void OnVolumePostfix(JukeboxInstance __instance)
         {
-            int volumePercentage = (int) (___volume * 100);
+            int volumePercentage = (int) (__instance.volume * 100);
 
-            Spotify.volume = volumePercentage;
-
-            volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
-            
+            Spotify.spotifyVolume = volumePercentage;
+            Spotify.jukeboxVolume = __instance.volume;
+            Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
             Jukebox.volume = 0;
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch("OnButtonShuffle")]
-        public static void OnButtonShufflePostFix(ref bool ___shuffle)
+        [HarmonyPatch(nameof(JukeboxInstance.OnButtonShuffle))]
+        public static void OnButtonShufflePostFix(JukeboxInstance __instance)
         {
-            Spotify.client.Player.SetShuffle(new PlayerShuffleRequest(___shuffle));
+            Spotify.client.Player.SetShuffle(new PlayerShuffleRequest(__instance.shuffle));
         }        
         
         [HarmonyPostfix]
-        [HarmonyPatch("OnButtonRepeat")]
-        public static void OnButtonRepeatPostFix(ref Jukebox.Repeat ___repeat)
+        [HarmonyPatch(nameof(JukeboxInstance.OnButtonRepeat))]
+        public static void OnButtonRepeatPostFix(JukeboxInstance __instance)
         {
-            QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Repeat button pressed. ___repeat: " + ___repeat.ToString(), null, true);
+            //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Repeat button pressed. repeat: " + __instance.repeat.ToString(), null, true);
 
             PlayerSetRepeatRequest.State state;
 
-            switch (___repeat.ToString())
+            switch (__instance.repeat.ToString())
             {
                 case "Track":
                     Spotify.repeatTrack = true;
@@ -88,16 +84,31 @@ namespace JukeboxSpotify
         }
 
         [HarmonyPostfix]
-        [HarmonyPatch("OnPositionEndDrag")]
+        [HarmonyPatch(nameof(JukeboxInstance.OnPositionEndDrag))]
         public static void OnPositionEndDragPostFix(JukeboxInstance __instance)
         {
             if (true == Spotify.isPlaying || true == Spotify.isPaused)
             {
-                long trackPosition = (long) (Spotify.currentTrackLength * _positionRef(__instance)); // _position is a percentage
-                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "End drag occured. _position: " + _positionRef(__instance) + " | trackPosition: " + trackPosition + " | trackLength: " + Spotify.currentTrackLength, null, true);
+                long trackPosition = (long) (Spotify.currentTrackLength * __instance._position); // _position is a percentage
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "End drag occured. _position: " + __instance._position + " | trackPosition: " + trackPosition + " | trackLength: " + Spotify.currentTrackLength, null, true);
                 Spotify.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = Spotify.device.Id });
                 Spotify.timeTrackStarted = Time.time - trackPosition / 1000;
             }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(JukeboxInstance.OnButtonPlayPause))]
+        public static bool OnButtonPlayPausePreFix(JukeboxInstance __instance)
+        {
+            // This is needed for the first time we press play.
+            if (!Jukebox.HasFile(__instance._file))
+            {
+                //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Jukebox doesn't have our track D:", null, true);
+                Jukebox.Play(__instance);
+                return false;
+            }
+
+            return true;
         }
     }
 

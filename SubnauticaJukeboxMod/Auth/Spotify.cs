@@ -12,6 +12,7 @@ namespace JukeboxSpotify
     {
         private static EmbedIOAuthServer _server = null;
         public static DebounceDispatcher trackDebouncer = new DebounceDispatcher(1000);
+        public static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(250);
         public static bool? isPlaying = null;
         public static bool isPaused = false;
         public static bool repeatTrack = false;
@@ -28,7 +29,8 @@ namespace JukeboxSpotify
         public static uint currentTrackLength = 0;
         public static float timeTrackStarted = 0;
         public static uint timelinePosition = 0;
-        public static int volume = 100;
+        public static int spotifyVolume = 100;
+        public static float jukeboxVolume = Jukebox.volume;
 
         public async static Task SpotifyLogin()
         {
@@ -146,7 +148,7 @@ namespace JukeboxSpotify
                 }
 
                 var currentTrack = (FullTrack) currentlyPlaying.Item;
-                Logger.Log(Logger.Level.Info, "Current track: " + currentTrack.Name, null, true);
+                //Logger.Log(Logger.Level.Info, "Current track: " + currentTrack.Name, null, true);
 
                 if (currentTrackTitle == "Spotify Jukebox Mod") playingOnStartup = currentlyPlaying.IsPlaying;
                 isCurrentlyPlaying = currentlyPlaying.IsPlaying;
@@ -173,25 +175,8 @@ namespace JukeboxSpotify
             var request = new LoginRequest(_server.BaseUri, Variables._clientId, LoginRequest.ResponseType.Code)
             {
                 Scope = new[] {
-                    Scopes.AppRemoteControl,
-                    Scopes.PlaylistModifyPrivate,
-                    Scopes.PlaylistModifyPublic,
-                    Scopes.PlaylistReadCollaborative,
-                    Scopes.PlaylistReadPrivate,
-                    Scopes.Streaming,
-                    Scopes.UgcImageUpload,
-                    Scopes.UserFollowModify,
-                    Scopes.UserFollowRead,
-                    Scopes.UserLibraryModify,
-                    Scopes.UserLibraryRead,
                     Scopes.UserModifyPlaybackState,
-                    Scopes.UserReadCurrentlyPlaying,
-                    Scopes.UserReadEmail,
-                    Scopes.UserReadPlaybackPosition,
-                    Scopes.UserReadPlaybackState,
-                    Scopes.UserReadPrivate,
-                    Scopes.UserReadRecentlyPlayed,
-                    Scopes.UserTopRead
+                    Scopes.UserReadPlaybackState
                 }
             };
             BrowserUtil.Open(request.ToUri());
