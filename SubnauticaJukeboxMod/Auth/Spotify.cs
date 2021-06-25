@@ -30,6 +30,7 @@ namespace JukeboxSpotify
         public static float timeTrackStarted = 0;
         public static uint timelinePosition = 0;
         public static int spotifyVolume = 100;
+        public static string clientId = Encryption.Decrypt(Variables._clientId, "dW5pY29ybnNhcmVtYWdpYw==", "Yml0ZW1lZGFkZHk=", "TUQ1",2,"aDNnZnNkMGw3aGQzaGxudA==",128);
         public static float jukeboxVolume = Jukebox.volume;
 
         public async static Task SpotifyLogin()
@@ -45,7 +46,7 @@ namespace JukeboxSpotify
 
                     try
                     {
-                        Start(token);
+                        await RefreshSession();
                     }
                     catch (Exception e)
                     {
@@ -77,14 +78,15 @@ namespace JukeboxSpotify
             }
         }
 
-        public static void Start(PKCETokenResponse token)
+        public async static Task RefreshSession(bool runAgain = false)
         {
-            var authenticator = new PKCEAuthenticator(Variables._clientId, token);
-            var config = SpotifyClientConfig.CreateDefault()
-                .WithAuthenticator(authenticator);
+            var newResponse = await new OAuthClient().RequestToken(
+              new PKCETokenRefreshRequest(clientId, token.RefreshToken)
+            );
 
-            client = new SpotifyClient(config);
-            _server.Dispose();
+            client = new SpotifyClient(newResponse.AccessToken);
+
+            var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn - 50);
         }
 
         public async static Task RunServer()
@@ -96,7 +98,7 @@ namespace JukeboxSpotify
             {
                 await _server.Stop();
                 PKCETokenResponse token = await new OAuthClient().RequestToken(
-                  new PKCETokenRequest(Variables._clientId, response.Code, _server.BaseUri, verifier)
+                  new PKCETokenRequest(clientId, response.Code, _server.BaseUri, verifier)
                 );
 
                 SQL.QueryTable("INSERT INTO Auth (access_token, refresh_token, token_type, expires_in) VALUES(" +
@@ -106,10 +108,15 @@ namespace JukeboxSpotify
                 token.ExpiresIn +
             ")");
 
-                Start(token);
+                var authenticator = new PKCEAuthenticator(clientId, token);
+                var config = SpotifyClientConfig.CreateDefault()
+                    .WithAuthenticator(authenticator);
+
+                client = new SpotifyClient(config);
+                _server.Dispose();
             };
 
-            var request = new LoginRequest(_server.BaseUri, Variables._clientId, LoginRequest.ResponseType.Code)
+            var request = new LoginRequest(_server.BaseUri, clientId, LoginRequest.ResponseType.Code)
             {
                 CodeChallenge = challenge,
                 CodeChallengeMethod = "S256",
