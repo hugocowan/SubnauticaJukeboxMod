@@ -10,7 +10,7 @@ namespace JukeboxSpotify
 {
     class Spotify
     {
-        private static EmbedIOAuthServer _server = null;
+        private static EmbedIOAuthServer _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
         public static DebounceDispatcher trackDebouncer = new DebounceDispatcher(1000);
         public static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(250);
         public static bool? isPlaying = null;
@@ -21,7 +21,7 @@ namespace JukeboxSpotify
         public static bool justStarted = true;
         public static uint startingPosition = 0;
         public static SpotifyClient client = null;
-        public static string refreshToken = null;
+        public static PKCETokenResponse token = null;
         public static Device device = null;
         public static bool jukeboxNeedsUpdating = false;
         public static bool jukeboxNeedsPlaying = false;
@@ -37,25 +37,22 @@ namespace JukeboxSpotify
             try
             {
                 // Check the database for a stored refresh token
-                List<string> result = SQL.ReadData("SELECT * FROM Auth");
+                List<string> result = SQL.ReadData("SELECT * FROM Auth", "token");
 
                 if (null != result && result.Count > 0)
                 {
-                    refreshToken = result[0];
-                }
+                    token = new PKCETokenResponse() { AccessToken = result[0], RefreshToken = result[1], TokenType = result[2], ExpiresIn = int.Parse(result[3]) };
 
-                if (null != refreshToken)
-                {
                     try
                     {
-                        await RefreshSession();
+                        Start(token);
                     }
                     catch (Exception e)
                     {
                         new ErrorHandler(e, "An error occurred refreshing the session");
                         await RunServer();
                     }
-                } // If there wasn't a refresh token, we need to get one
+                }
                 else
                 {
                     await RunServer();
@@ -80,6 +77,57 @@ namespace JukeboxSpotify
             }
         }
 
+        public static void Start(PKCETokenResponse token)
+        {
+            var authenticator = new PKCEAuthenticator(Variables._clientId, token);
+            var config = SpotifyClientConfig.CreateDefault()
+                .WithAuthenticator(authenticator);
+
+            client = new SpotifyClient(config);
+            _server.Dispose();
+        }
+
+        public async static Task RunServer()
+        {
+            var (verifier, challenge) = PKCEUtil.GenerateCodes();
+            await _server.Start();
+
+            _server.AuthorizationCodeReceived += async (sender, response) =>
+            {
+                await _server.Stop();
+                PKCETokenResponse token = await new OAuthClient().RequestToken(
+                  new PKCETokenRequest(Variables._clientId, response.Code, _server.BaseUri, verifier)
+                );
+
+                SQL.QueryTable("INSERT INTO Auth (access_token, refresh_token, token_type, expires_in) VALUES(" +
+                "'" + token.AccessToken + "'," +
+                "'" + token.RefreshToken + "'," +
+                "'" + token.TokenType + "'," +
+                token.ExpiresIn +
+            ")");
+
+                Start(token);
+            };
+
+            var request = new LoginRequest(_server.BaseUri, Variables._clientId, LoginRequest.ResponseType.Code)
+            {
+                CodeChallenge = challenge,
+                CodeChallengeMethod = "S256",
+                Scope = new List<string> { Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState }
+            };
+
+            Uri uri = request.ToUri();
+
+            try
+            {
+                BrowserUtil.Open(uri);
+            }
+            catch (Exception)
+            {
+                Logger.Log(Logger.Level.Info, "Error opening URL", null, true);
+            }
+
+        }
         public async static Task GetDevice()
         {
             // Get an available device to play tracks with.
@@ -140,94 +188,29 @@ namespace JukeboxSpotify
             try
             {
                 var currentlyPlaying = await client.Player.GetCurrentPlayback();
-                
+
                 if (null == currentlyPlaying || null == currentlyPlaying.Item)
                 {
                     Logger.Log(Logger.Level.Info, "No track currently playing", null, false);
                     return;
                 }
 
-                var currentTrack = (FullTrack) currentlyPlaying.Item;
+                var currentTrack = (FullTrack)currentlyPlaying.Item;
                 //Logger.Log(Logger.Level.Info, "Current track: " + currentTrack.Name, null, true);
 
                 if (currentTrackTitle == "Spotify Jukebox Mod") playingOnStartup = currentlyPlaying.IsPlaying;
                 isCurrentlyPlaying = currentlyPlaying.IsPlaying;
-                startingPosition = (uint) currentlyPlaying.ProgressMs;
+                startingPosition = (uint)currentlyPlaying.ProgressMs;
                 currentTrackTitle = currentTrack.Name;
-                currentTrackLength = (uint) currentTrack.DurationMs;
+                currentTrackLength = (uint)currentTrack.DurationMs;
                 jukeboxNeedsUpdating = true;
-            } catch(Exception e)
+            }
+            catch (Exception e)
             {
                 new ErrorHandler(e, "Something went wrong getting track info");
             }
 
             if (plsRepeat) _ = SetInterval(GetTrackInfo, 5000);
-        }
-
-        public async static Task RunServer()
-        {
-            _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
-            await _server.Start();
-
-            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-            _server.ErrorReceived += OnErrorReceived;
-
-            var request = new LoginRequest(_server.BaseUri, Variables._clientId, LoginRequest.ResponseType.Code)
-            {
-                Scope = new[] {
-                    Scopes.UserModifyPlaybackState,
-                    Scopes.UserReadPlaybackState
-                }
-            };
-            BrowserUtil.Open(request.ToUri());
-        }
-
-        private async static Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
-        {
-            await _server.Stop();
-            await SetupSpotifyClient(response.Code, true);
-        }
-
-        private async static Task SetupSpotifyClient(string code, bool saveToDB = false)
-        {
-            // Get the access token and set up the SpotifyClient.
-            SpotifyClientConfig config = SpotifyClientConfig.CreateDefault();
-            var tokenResponse = await new OAuthClient(config).RequestToken(
-              new AuthorizationCodeTokenRequest(
-                Variables._clientId, Variables._clientSecret, code, new Uri("http://localhost:5000/callback")
-              )
-            );
-
-
-            if (saveToDB) SQL.QueryTable("INSERT INTO Auth (authorization_code, access_token, refresh_token, expires_in) VALUES(" +
-                "'" + code + "'," +
-                "'" + tokenResponse.AccessToken + "'," +
-                "'" + tokenResponse.RefreshToken + "'," +
-                tokenResponse.ExpiresIn +
-            ")");
-
-            config = SpotifyClientConfig
-                .CreateDefault()
-                .WithAuthenticator(new AuthorizationCodeAuthenticator(Variables._clientId, Variables._clientSecret, tokenResponse));
-
-            client = new SpotifyClient(config);
-        }
-
-        private static async Task OnErrorReceived(object sender, string error, string state)
-        {
-            Console.WriteLine($"Aborting authorization, error received: {error}");
-            await _server.Stop();
-        }
-
-        private async static Task RefreshSession(bool plsRepeat = false)
-        {
-            var newResponse = await new OAuthClient().RequestToken(
-              new AuthorizationCodeRefreshRequest(Variables._clientId, Variables._clientSecret, refreshToken)
-            );
-
-            client = new SpotifyClient(newResponse.AccessToken);
-
-            var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn - 50);
         }
 
         private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 50)

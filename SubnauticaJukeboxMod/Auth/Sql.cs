@@ -39,7 +39,7 @@ namespace JukeboxSpotify
 
             try
             {
-                cmd.CommandText = "CREATE TABLE IF NOT EXISTS Auth (id INTEGER PRIMARY KEY, authorization_code VARCHAR(64) NULL, access_token VARCHAR(64) NULL, refresh_token VARCHAR(64) NULL, expires_in INT NULL)";
+                cmd.CommandText = "CREATE TABLE IF NOT EXISTS Auth (id INTEGER PRIMARY KEY, access_token VARCHAR(64) NULL, refresh_token VARCHAR(64) NULL, token_type VARCHAR(64) NULL, expires_in INT NULL)";
                 cmd.ExecuteNonQuery();
                 cmd.CommandText = "CREATE TABLE IF NOT EXISTS Device (id INTEGER PRIMARY KEY, device_id VARCHAR(64) NULL, device_name VARCHAR(64) NULL)";
                 cmd.ExecuteNonQuery();
@@ -67,7 +67,7 @@ namespace JukeboxSpotify
             
         }
 
-        public static List<string> ReadData(string query, string type = "refreshToken")
+        public static List<string> ReadData(string query, string type = "token")
         {
             SQLiteCommand cmd = Conn.CreateCommand();
             cmd.CommandText = query;
@@ -80,8 +80,8 @@ namespace JukeboxSpotify
             {
                 switch(type)
                 {
-                    case "refreshToken":
-                        results = new List<string> { reader.GetString(3) };
+                    case "token":
+                        results = new List<string> { reader.GetString(1), reader.GetString(2), reader.GetString(3), "" + reader.GetInt32(4) };
                         break;
                     case "device":
                         results = new List<string>() { reader.GetString(1), reader.GetString(2) };
@@ -91,6 +91,11 @@ namespace JukeboxSpotify
             }
 
             return results;
+        }
+
+        internal static void QueryTable(object p)
+        {
+            throw new NotImplementedException();
         }
     }
 }
