@@ -363,5 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 
 SubnauticaJukeboxMod/Variables.cs
+SubnauticaJukeboxMod/Auth/Encryption.cs
 SubnauticaJukeboxMod/build
 QMods.lnk

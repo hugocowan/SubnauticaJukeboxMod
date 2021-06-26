@@ -25,7 +25,8 @@ namespace JukeboxSpotify
             try
             {
                 conn.Open();
-            } catch(Exception e)
+            }
+            catch (Exception e)
             {
                 new ErrorHandler(e, "Something went wrong opening an SQLite connection");
             }
@@ -39,15 +40,16 @@ namespace JukeboxSpotify
 
             try
             {
-                cmd.CommandText = "CREATE TABLE IF NOT EXISTS Auth (id INTEGER PRIMARY KEY, access_token VARCHAR(64) NULL, refresh_token VARCHAR(64) NULL, token_type VARCHAR(64) NULL, expires_in INT NULL)";
+                cmd.CommandText = "CREATE TABLE IF NOT EXISTS Auth (id INTEGER PRIMARY KEY, authorization_code VARCHAR(64) NULL, access_token VARCHAR(64) NULL, refresh_token VARCHAR(64) NULL, expires_in INT NULL)";
                 cmd.ExecuteNonQuery();
                 cmd.CommandText = "CREATE TABLE IF NOT EXISTS Device (id INTEGER PRIMARY KEY, device_id VARCHAR(64) NULL, device_name VARCHAR(64) NULL)";
                 cmd.ExecuteNonQuery();
-            } catch(Exception e)
+            }
+            catch (Exception e)
             {
                 new ErrorHandler(e, "Error making tables");
             }
-            
+
 
         }
 
@@ -60,14 +62,14 @@ namespace JukeboxSpotify
                 cmd.CommandText = query;
                 cmd.ExecuteNonQuery();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 new ErrorHandler(e, "Error inserting into tables");
             }
-            
+
         }
 
-        public static List<string> ReadData(string query, string type = "token")
+        public static List<string> ReadData(string query, string type = "refreshToken")
         {
             SQLiteCommand cmd = Conn.CreateCommand();
             cmd.CommandText = query;
@@ -78,24 +80,19 @@ namespace JukeboxSpotify
 
             while (reader.Read())
             {
-                switch(type)
+                switch (type)
                 {
-                    case "token":
-                        results = new List<string> { reader.GetString(1), reader.GetString(2), reader.GetString(3), "" + reader.GetInt32(4) };
+                    case "refreshToken":
+                        results = new List<string> { reader.GetString(3) };
                         break;
                     case "device":
                         results = new List<string>() { reader.GetString(1), reader.GetString(2) };
                         break;
                 }
-                
+
             }
 
             return results;
-        }
-
-        internal static void QueryTable(object p)
-        {
-            throw new NotImplementedException();
         }
     }
 }
