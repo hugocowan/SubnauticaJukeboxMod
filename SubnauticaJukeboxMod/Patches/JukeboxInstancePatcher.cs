@@ -1,5 +1,4 @@
-﻿using DebounceThrottle;
-using HarmonyLib;
+﻿using HarmonyLib;
 using SpotifyAPI.Web;
 using UnityEngine;
 
@@ -33,6 +32,9 @@ namespace JukeboxSpotify
                 Spotify.jukeboxNeedsPlaying = false;
                 Spotify.justStarted = false;
                 Jukebox.Play(__instance);
+            } else if (null != __instance)
+            {
+                Spotify.justStarted = false;
             }
             //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "_positionRef after: " + _positionRef(__instance), null, true);
         }
@@ -87,10 +89,10 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.OnPositionEndDrag))]
         public static void OnPositionEndDragPostFix(JukeboxInstance __instance)
         {
-            if (true == Spotify.isPlaying || true == Spotify.isPaused)
+            if (true == Spotify.jukeboxIsPlaying || true == Spotify.jukeboxIsPaused)
             {
                 long trackPosition = (long) (Spotify.currentTrackLength * __instance._position); // _position is a percentage
-                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "End drag occured. _position: " + __instance._position + " | trackPosition: " + trackPosition + " | trackLength: " + Spotify.currentTrackLength, null, true);
+                //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "End drag occured. _position: " + __instance._position + " | trackPosition: " + trackPosition + " | trackLength: " + Spotify.currentTrackLength, null, true);
                 Spotify.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = Spotify.device.Id });
                 Spotify.timeTrackStarted = Time.time - trackPosition / 1000;
             }
