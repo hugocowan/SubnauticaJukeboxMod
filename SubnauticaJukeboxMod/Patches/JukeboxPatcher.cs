@@ -7,11 +7,9 @@ namespace JukeboxSpotify
     [HarmonyPatch(typeof(Jukebox))]
     class JukeboxPatcher
     {
-        public static bool pauseOnLeaving = true;
-
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Jukebox.GetNext))]
-        public async static void GetNextPostfix(JukeboxInstance jukebox, bool forward)
+        public async static void GetNextPostfix(bool forward)
         {
 
             if (Spotify.repeatTrack)
@@ -55,7 +53,6 @@ namespace JukeboxSpotify
         {
             Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100));
             Spotify.trackDebouncer.Debounce(() => { }); // Clear the debouncer
-            SQL.Conn.Close();
             if (Spotify.playingOnStartup) return;
             Spotify.jukeboxIsPlaying = null;
             var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id };
@@ -147,7 +144,7 @@ namespace JukeboxSpotify
             {
                 volumePercentage = (int) ((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100);
 
-                if (pauseOnLeaving && Spotify.jukeboxIsPaused)
+                if (MainPatcher.Config.PauseOnLeaveToggleValue && Spotify.jukeboxIsPaused)
                 {
                     //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Resuming track cos of distance", null, true);
                     __instance._paused = false;
@@ -156,14 +153,14 @@ namespace JukeboxSpotify
                     Spotify.spotifyIsPlaying = true;
                 }
 
-                if (Player.main != null && true == Player.main.isUnderwater.value) volumePercentage = volumePercentage / 2;
+                if (Player.main != null && true == Player.main.isUnderwater.value) volumePercentage /= 2;
                 if (volumePercentage < 0) volumePercentage = 0;
                 Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
                 Spotify.spotifyVolume = volumePercentage;
             } 
             else if (uGUI_SceneLoadingPatcher.loadingDone && !__instance._audible && soundPositionNotOrigin)
             {
-                if (pauseOnLeaving && !Spotify.jukeboxIsPaused)
+                if (MainPatcher.Config.PauseOnLeaveToggleValue && !Spotify.jukeboxIsPaused)
                 {
                     //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "pausing track cos of distance. __instance._audible: " + __instance._audible + " | sqrMagnitude: " + sqrMagnitude, null, true);
                     __instance._paused = true;
@@ -194,8 +191,6 @@ namespace JukeboxSpotify
                 Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify.device.Id });
                 Spotify.spotifyIsPlaying = true;
             }
-
-            
         }
     }
 }

@@ -9,7 +9,7 @@ namespace JukeboxSpotify
 
         [HarmonyPostfix]
         [HarmonyPatch("End")]
-        public static void EndPostfix(bool fade = true)
+        public static void EndPostfix()
         {
             loadingDone = true;
         }

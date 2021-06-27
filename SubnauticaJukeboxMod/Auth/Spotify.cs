@@ -1,4 +1,5 @@
 ﻿using DebounceThrottle;
+using QModManager.API;
 using QModManager.Utility;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
@@ -10,24 +11,21 @@ namespace JukeboxSpotify
 {
     class Spotify
     {
-        private static EmbedIOAuthServer _server = null;
+        private static EmbedIOAuthServer _server;
         public static DebounceDispatcher trackDebouncer = new DebounceDispatcher(1000);
         public static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(250);
-        public static bool? jukeboxIsPlaying = null;
+        public static bool? jukeboxIsPlaying;
         public static bool jukeboxIsPaused = false;
         public static bool spotifyIsPlaying = false;
         public static bool repeatTrack = false;
         public static bool playingOnStartup = false;
         public static bool justStarted = true;
         public static uint startingPosition = 0;
-        public static SpotifyClient client = null;
-        public static string refreshToken = null;
-        public static Device device = null;
+        public static SpotifyClient client;
+        public static Device device;
         public static bool jukeboxNeedsUpdating = false;
         public static bool jukeboxNeedsPlaying = false;
-        public static string currentTrackTitle = "Spotify Jukebox Mod";
-        public static string clientId = Variables.clientId;
-        public static string clientSecret = Variables.clientSecret;
+        public static string currentTrackTitle = "Spotify Jukebox Mod (If nothing plays, play/pause Spotify and try again)";
         public static uint currentTrackLength = 0;
         public static float timeTrackStarted = 0;
         public static uint timelinePosition = 0;
@@ -38,15 +36,15 @@ namespace JukeboxSpotify
         {
             try
             {
-                // Check the database for a stored refresh token
-                List<string> result = SQL.ReadData("SELECT * FROM Auth");
+                // Check the config for a stored refresh token
 
-                if (null != result && result.Count > 0)
+                if (null == MainPatcher.Config.clientId || null == MainPatcher.Config.clientSecret)
                 {
-                    refreshToken = result[0];
+                    QModServices.Main.AddCriticalMessage("Please add your Spotify client id and secret to your config.json file, then reload your save. Instructions are on the Nexus mod page.");
+                    return;
                 }
 
-                if (null != refreshToken)
+                if (null != MainPatcher.Config.refreshToken)
                 {
                     try
                     {
@@ -78,7 +76,7 @@ namespace JukeboxSpotify
             }
             catch (Exception e)
             {
-                new ErrorHandler(e, "Something went wrong loading Spotify");
+                Logger.Log(Logger.Level.Warn, "Spotify successfully loaded", e, false);
             }
         }
 
@@ -92,12 +90,10 @@ namespace JukeboxSpotify
                 DeviceResponse devices = await client.Player.GetAvailableDevices();
                 bool foundActiveDevice = false;
 
-                List<string> result = SQL.ReadData("SELECT * FROM Device", "device");
-
-                if (result != null && result.Count > 0)
+                if (null != MainPatcher.Config.deviceId)
                 {
-                    availableDevice = new Device() { Id = result[0], Name = result[1] };
-                    Logger.Log(Logger.Level.Info, "Pre-loaded latest device from database in case we need it: " + availableDevice.Name, null, false);
+                    availableDevice = new Device() { Id = MainPatcher.Config.deviceId };
+                    Logger.Log(Logger.Level.Info, "Pre-loaded latest device from database in case we need it: " + availableDevice.Id, null, false);
                 }
 
                 devices.Devices.ForEach(delegate (Device device)
@@ -111,17 +107,15 @@ namespace JukeboxSpotify
                         availableDevice = device;
                         foundActiveDevice = true;
 
-                        SQL.QueryTable("INSERT INTO Device (device_id, device_name) VALUES(" +
-                            "'" + availableDevice.Id + "'," +
-                            "'" + availableDevice.Name + "'" +
-                        ")");
+                        MainPatcher.Config.deviceId = device.Id;
+                        MainPatcher.Config.Save();
                     }
                 });
 
                 // If no active device was found, choose the first one in the devices list.
                 if (null == availableDevice)
                 {
-                    Logger.Log(Logger.Level.Info, "No Spotify device found. Please play/pause your spotify client and reload your game.", null, true);
+                    Logger.Log(Logger.Level.Info, "No Spotify device found. Please play/pause your spotify client and reload your game.", null, false);
 
                     return;
                 }
@@ -147,9 +141,6 @@ namespace JukeboxSpotify
                     await client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { device.Id }));
                 }
 
-                
-
-
                 var currentTrack = (FullTrack) currentlyPlaying.Item;
 
                 if (uGUI_SceneLoadingPatcher.loadingDone && null != Jukebox.main._instance)
@@ -169,10 +160,6 @@ namespace JukeboxSpotify
                     if (Jukebox.shuffle != currentlyPlaying.ShuffleState) Jukebox.main._instance.OnButtonShuffle();
                 }
 
-                //Logger.Log(Logger.Level.Info, "currentlyPlaying.RepeatState: " + currentlyPlaying.RepeatState.ToString() + " | currentlyPlaying.ShuffleState: " + currentlyPlaying.ShuffleState + "  ", null, true);
-                //Logger.Log(Logger.Level.Info, " --- Jukebox.repeat: " + Jukebox.repeat + " | Jukebox.shuffle: " + Jukebox.shuffle + "  ", null, true);
-                //Logger.Log(Logger.Level.Info, " --- null == Jukebox.main._instance: " + (null == Jukebox.main._instance), null, true);
-
                 if (currentTrackTitle == "Spotify Jukebox Mod") playingOnStartup = currentlyPlaying.IsPlaying;
                 spotifyIsPlaying = currentlyPlaying.IsPlaying;
                 startingPosition = (uint) currentlyPlaying.ProgressMs;
@@ -181,7 +168,8 @@ namespace JukeboxSpotify
                 jukeboxNeedsUpdating = true;
             } catch(Exception e)
             {
-                new ErrorHandler(e, "Something went wrong getting track info. Please play/pause your Jukebox. If that doesn't work, try play/pausing your spotify client and then try the Jukebox again.");
+                Logger.Log(Logger.Level.Error, "Something went wrong getting track info.", e, false);
+                await GetDevice();
             }
 
             if (plsRepeat) _ = SetInterval(GetTrackInfo, 5000);
@@ -195,7 +183,7 @@ namespace JukeboxSpotify
             _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
             _server.ErrorReceived += OnErrorReceived;
 
-            var request = new LoginRequest(_server.BaseUri, clientId, LoginRequest.ResponseType.Code)
+            var request = new LoginRequest(_server.BaseUri, MainPatcher.Config.clientId, LoginRequest.ResponseType.Code)
             {
                 Scope = new[] { Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState }
             };
@@ -208,45 +196,42 @@ namespace JukeboxSpotify
             await SetupSpotifyClient(response.Code, true);
         }
 
-        private async static Task SetupSpotifyClient(string code, bool saveToDB = false)
+        private async static Task SetupSpotifyClient(string code, bool saveToConfig = false)
         {
             // Get the access token and set up the SpotifyClient.
             SpotifyClientConfig config = SpotifyClientConfig.CreateDefault();
             var tokenResponse = await new OAuthClient(config).RequestToken(
               new AuthorizationCodeTokenRequest(
-                clientId, clientSecret, code, new Uri("http://localhost:5000/callback")
+                MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, code, new Uri("http://localhost:5000/callback")
               )
             );
 
+            if (saveToConfig)
+            {
+                MainPatcher.Config.refreshToken = tokenResponse.RefreshToken;
+                MainPatcher.Config.Save();
+            }
 
-            if (saveToDB) SQL.QueryTable("INSERT INTO Auth (authorization_code, access_token, refresh_token, expires_in) VALUES(" +
-                "'" + code + "'," +
-                "'" + tokenResponse.AccessToken + "'," +
-                "'" + tokenResponse.RefreshToken + "'," +
-                tokenResponse.ExpiresIn +
-            ")");
 
             config = SpotifyClientConfig
                 .CreateDefault()
-                .WithAuthenticator(new AuthorizationCodeAuthenticator(clientId, clientSecret, tokenResponse));
+                .WithAuthenticator(new AuthorizationCodeAuthenticator(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, tokenResponse));
 
             client = new SpotifyClient(config);
         }
 
         private static async Task OnErrorReceived(object sender, string error, string state)
         {
-            Console.WriteLine($"Aborting authorization, error received: {error}");
             await _server.Stop();
         }
 
         private async static Task RefreshSession(bool plsRepeat = false)
         {
             var newResponse = await new OAuthClient().RequestToken(
-              new AuthorizationCodeRefreshRequest(clientId, clientSecret, refreshToken)
+              new AuthorizationCodeRefreshRequest(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, MainPatcher.Config.refreshToken)
             );
 
             client = new SpotifyClient(newResponse.AccessToken);
-
             var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn - 50);
         }
 

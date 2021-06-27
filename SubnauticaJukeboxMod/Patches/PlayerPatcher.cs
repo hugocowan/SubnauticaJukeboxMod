@@ -10,7 +10,6 @@ namespace JukeboxSpotify
         [HarmonyPatch("Awake")]
         public async static void AwakePostfix()
         {
-            new SQL();
             await Spotify.SpotifyLogin();
         }
     }
