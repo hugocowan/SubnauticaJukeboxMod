@@ -29,14 +29,11 @@ namespace JukeboxSpotify
         {
             if (Spotify.jukeboxNeedsPlaying && Spotify.justStarted && null != __instance)
             {
+                //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "jukeboxNeedsPlaying: " + Spotify.jukeboxNeedsPlaying, null, true);
                 Spotify.jukeboxNeedsPlaying = false;
                 Spotify.justStarted = false;
                 Jukebox.Play(__instance);
-            } else if (null != __instance)
-            {
-                Spotify.justStarted = false;
             }
-            //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "_positionRef after: " + _positionRef(__instance), null, true);
         }
 
         [HarmonyPostfix]
@@ -102,10 +99,18 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonPlayPause))]
         public static bool OnButtonPlayPausePreFix(JukeboxInstance __instance)
         {
+            if (!Jukebox.main._paused)
+            {
+                Spotify.manualPause = true;
+            } 
+            else
+            {
+                Spotify.manualPause = false;
+            }
             // This is needed for the first time we press play.
             if (!Jukebox.HasFile(__instance._file))
             {
-                //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Jukebox doesn't have our track D:", null, true);
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Jukebox doesn't have our track D:", null, true);
                 Jukebox.Play(__instance);
                 return false;
             }

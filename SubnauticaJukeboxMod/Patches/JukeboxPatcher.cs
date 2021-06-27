@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using SpotifyAPI.Web;
+using System;
 using UnityEngine;
 
 namespace JukeboxSpotify
@@ -42,7 +43,8 @@ namespace JukeboxSpotify
                 await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
             }
 
-            await Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume));
+            Spotify.manualPause = false;
+            Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume)));
             await Spotify.trackDebouncer.DebounceAsync(() => Spotify.GetTrackInfo());
         }
 
@@ -51,12 +53,16 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(Jukebox.OnApplicationQuit))]
         public static void OnApplicationQuitPostfix()
         {
-            Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100));
             Spotify.trackDebouncer.Debounce(() => { }); // Clear the debouncer
-            if (Spotify.playingOnStartup) return;
-            Spotify.jukeboxIsPlaying = null;
-            var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id };
-            Spotify.client.Player.PausePlayback(playbackRequest);
+            Spotify.volumeThrottler.Throttle(() => { }); // Clear the throttler
+            if (!Spotify.playingOnStartup)
+            {
+                var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id };
+                Spotify.client.Player.PausePlayback(playbackRequest);
+                Spotify.jukeboxIsPlaying = null;
+            }
+            Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100));
+            
         }
 
         [HarmonyPostfix]
@@ -66,9 +72,11 @@ namespace JukeboxSpotify
             //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Play track", null, true);
             Jukebox.volume = 0;
             Spotify.jukeboxIsPlaying = true;
+            Spotify.manualPause = false;
 
             try
             {
+                await Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume));
                 await Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify.device.Id });
                 Spotify.spotifyIsPlaying = true;
             } catch
@@ -86,6 +94,7 @@ namespace JukeboxSpotify
             Spotify.jukeboxIsPaused = false;
             await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
             Spotify.spotifyIsPlaying = false;
+            Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100)));
             await Spotify.client.Player.SeekTo(new PlayerSeekToRequest(0));
             Spotify.timeTrackStarted = Time.time;
             Spotify.startingPosition = 0;
@@ -128,7 +137,7 @@ namespace JukeboxSpotify
                     __instance._instance.file = Spotify.currentTrackTitle;
                 }
 
-                if (Spotify.justStarted && Spotify.playingOnStartup && Spotify.startingPosition > 0)
+                if (Spotify.justStarted && Spotify.playingOnStartup)
                 {
                     Spotify.jukeboxNeedsPlaying = true;
                 }
@@ -140,10 +149,12 @@ namespace JukeboxSpotify
             bool soundPositionNotOrigin = __instance.soundPosition.x != 0 && __instance.soundPosition.y != 0 && __instance.soundPosition.z != 0;
             int volumePercentage = (int)(Spotify.jukeboxVolume * 100);
 
-            if (uGUI_SceneLoadingPatcher.loadingDone && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
+            // If music is audible, set the volume.
+            if (!Spotify.manualPause && uGUI_SceneLoadingPatcher.loadingDone && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
             {
                 volumePercentage = (int) ((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100);
 
+                // If PauseOnLeaveToggleValue is true, make sure we resume playback
                 if (MainPatcher.Config.PauseOnLeaveToggleValue && Spotify.jukeboxIsPaused)
                 {
                     //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Resuming track cos of distance", null, true);
@@ -153,13 +164,27 @@ namespace JukeboxSpotify
                     Spotify.spotifyIsPlaying = true;
                 }
 
-                if (Player.main != null && true == Player.main.isUnderwater.value) volumePercentage /= 2;
+                // Check whether the jukebox is in a SeaTruck.
+                bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>();
+
+                // If the player is underwater, or if the seatruck jukebox is playing but the player is not in the seatruck, or if a base's jukebox is playing but they aren't in the base,
+                // halve the music volume as there is a body of water between the jukebox and the player.
+                if (
+                    (null != Player.main && true == Player.main.isUnderwater.value) ||
+                    (seaTruckJukeboxPlaying && (null == Player.main.currentInterior || Player.main.currentInterior.GetType().ToString() != "SeaTruckSegment")) ||
+                    (!seaTruckJukeboxPlaying && (null == Player.main.currentInterior || Player.main.currentInterior.GetType().ToString() != "BaseRoot"))
+                    )
+                {
+                    volumePercentage /= 2;
+                }
+
                 if (volumePercentage < 0) volumePercentage = 0;
                 Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
                 Spotify.spotifyVolume = volumePercentage;
             } 
-            else if (uGUI_SceneLoadingPatcher.loadingDone && !__instance._audible && soundPositionNotOrigin)
+            else if (!Spotify.manualPause && uGUI_SceneLoadingPatcher.loadingDone && !__instance._audible && soundPositionNotOrigin) // If music is inaudible, set Spotify volume to 0.
             {
+                // If PauseOnLeaveToggleValue is true, make sure we pause playback
                 if (MainPatcher.Config.PauseOnLeaveToggleValue && !Spotify.jukeboxIsPaused)
                 {
                     //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "pausing track cos of distance. __instance._audible: " + __instance._audible + " | sqrMagnitude: " + sqrMagnitude, null, true);

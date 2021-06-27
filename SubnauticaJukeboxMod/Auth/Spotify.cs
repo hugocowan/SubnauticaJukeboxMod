@@ -6,6 +6,7 @@ using SpotifyAPI.Web.Auth;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace JukeboxSpotify
 {
@@ -16,16 +17,18 @@ namespace JukeboxSpotify
         public static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(250);
         public static bool? jukeboxIsPlaying;
         public static bool jukeboxIsPaused = false;
+        public static bool manualPause = false;
         public static bool spotifyIsPlaying = false;
         public static bool repeatTrack = false;
         public static bool playingOnStartup = false;
-        public static bool justStarted = true;
+        public static bool justStarted;
         public static uint startingPosition = 0;
         public static SpotifyClient client;
         public static Device device;
         public static bool jukeboxNeedsUpdating = false;
         public static bool jukeboxNeedsPlaying = false;
-        public static string currentTrackTitle = "Spotify Jukebox Mod (If nothing plays, play/pause Spotify and try again)";
+        public static string defaultTitle = "Spotify Jukebox Mod (If nothing plays, play/pause Spotify and try again)";
+        public static string currentTrackTitle = defaultTitle;
         public static uint currentTrackLength = 0;
         public static float timeTrackStarted = 0;
         public static uint timelinePosition = 0;
@@ -71,12 +74,13 @@ namespace JukeboxSpotify
 
                 await Retry.Do(() => GetTrackInfo(true), TimeSpan.FromSeconds(1));
 
-                Logger.Log(Logger.Level.Info, "Spotify successfully loaded", null, false);
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Spotify successfully loaded", null, false);
+                justStarted = true;
 
             }
             catch (Exception e)
             {
-                Logger.Log(Logger.Level.Warn, "Spotify successfully loaded", e, false);
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Warn, "Spotify successfully loaded", e, false);
             }
         }
 
@@ -93,7 +97,7 @@ namespace JukeboxSpotify
                 if (null != MainPatcher.Config.deviceId)
                 {
                     availableDevice = new Device() { Id = MainPatcher.Config.deviceId };
-                    Logger.Log(Logger.Level.Info, "Pre-loaded latest device from database in case we need it: " + availableDevice.Id, null, false);
+                    QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Pre-loaded latest device from config.json in case we need it: " + availableDevice.Id, null, false);
                 }
 
                 devices.Devices.ForEach(delegate (Device device)
@@ -115,7 +119,7 @@ namespace JukeboxSpotify
                 // If no active device was found, choose the first one in the devices list.
                 if (null == availableDevice)
                 {
-                    Logger.Log(Logger.Level.Info, "No Spotify device found. Please play/pause your spotify client and reload your game.", null, false);
+                    QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "No Spotify device found. Please play/pause your spotify client and reload your game.", null, false);
 
                     return;
                 }
@@ -137,7 +141,7 @@ namespace JukeboxSpotify
                 
                 if (null == currentlyPlaying)
                 {
-                    Logger.Log(Logger.Level.Info, "Playback not found", null, false);
+                    QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Playback not found", null, false);
                     await client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { device.Id }));
                 }
 
@@ -152,7 +156,7 @@ namespace JukeboxSpotify
                     //    (currentlyPlaying.RepeatState == "off" && Jukebox.repeat != Jukebox.Repeat.Off)
                     //)
                     //{
-                    //    Logger.Log(Logger.Level.Info, "Hitting the repeat button. currentlyPlaying.RepeatState: ", null, true);
+                    //    QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Hitting the repeat button. currentlyPlaying.RepeatState: ", null, true);
                     //    Jukebox.main._instance.OnButtonRepeat();
                     //    await Task.Delay(500);
                     //}
@@ -160,16 +164,19 @@ namespace JukeboxSpotify
                     if (Jukebox.shuffle != currentlyPlaying.ShuffleState) Jukebox.main._instance.OnButtonShuffle();
                 }
 
-                if (currentTrackTitle == "Spotify Jukebox Mod") playingOnStartup = currentlyPlaying.IsPlaying;
+                if (currentTrackTitle == defaultTitle) playingOnStartup = currentlyPlaying.IsPlaying;
+
                 spotifyIsPlaying = currentlyPlaying.IsPlaying;
                 startingPosition = (uint) currentlyPlaying.ProgressMs;
                 currentTrackTitle = currentTrack.Name;
                 currentTrackLength = (uint) currentTrack.DurationMs;
                 jukeboxNeedsUpdating = true;
-            } catch(Exception e)
+
+            } 
+            catch(Exception e)
             {
-                Logger.Log(Logger.Level.Error, "Something went wrong getting track info.", e, false);
-                await GetDevice();
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Error, "Something went wrong getting track info.", e, false);
+                if (device == null) await GetDevice();
             }
 
             if (plsRepeat) _ = SetInterval(GetTrackInfo, 5000);
