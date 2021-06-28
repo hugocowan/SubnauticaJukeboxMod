@@ -24,7 +24,7 @@ namespace JukeboxSpotify
         {
             if (false == Spotify.jukeboxIsPlaying)
             {
-                //Logger.Log(Logger.Level.Info, "Game resumed, resuming track", null, true);
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Game resumed, resuming track", null, true);
                 Spotify.jukeboxIsPlaying = true;
                 await Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
             }

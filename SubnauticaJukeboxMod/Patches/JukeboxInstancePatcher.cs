@@ -27,11 +27,10 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.UpdateUI))]
         static void UpdateUIPrefix(JukeboxInstance __instance)
         {
-            if (Spotify.jukeboxNeedsPlaying && Spotify.justStarted && null != __instance)
+            if (Spotify.jukeboxNeedsPlaying && null != __instance)
             {
                 //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "jukeboxNeedsPlaying: " + Spotify.jukeboxNeedsPlaying, null, true);
                 Spotify.jukeboxNeedsPlaying = false;
-                Spotify.justStarted = false;
                 Jukebox.Play(__instance);
             }
         }
@@ -101,11 +100,11 @@ namespace JukeboxSpotify
         {
             if (!Jukebox.main._paused)
             {
-                Spotify.manualPause = true;
+                Spotify.manualJukeboxPause = true;
             } 
             else
             {
-                Spotify.manualPause = false;
+                Spotify.manualJukeboxPause = false;
             }
             // This is needed for the first time we press play.
             if (!Jukebox.HasFile(__instance._file))

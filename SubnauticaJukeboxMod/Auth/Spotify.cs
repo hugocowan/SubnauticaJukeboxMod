@@ -1,12 +1,10 @@
 ﻿using DebounceThrottle;
 using QModManager.API;
-using QModManager.Utility;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using UnityEngine;
 
 namespace JukeboxSpotify
 {
@@ -22,7 +20,10 @@ namespace JukeboxSpotify
         public static bool playingOnStartup = false;
         public static bool spotifyIsPlaying = false;
         public static bool? jukeboxIsPlaying;
-        public static bool manualPause = false;
+        public static bool manualJukeboxPause = false;
+        public static bool manualJukeboxPlay = false;
+        public static bool manualSpotifyPlay = false;
+        public static bool manualSpotifyPause = false;
         public static bool jukeboxIsPaused = false;
         public static bool jukeboxNeedsUpdating = false;
         public static bool jukeboxNeedsPlaying = false;
@@ -42,8 +43,8 @@ namespace JukeboxSpotify
 
                 if (null == MainPatcher.Config.clientId || null == MainPatcher.Config.clientSecret)
                 {
+                    currentTrackTitle = "Follow instructions on the Nexus mod page to add your Spotify client id and secret to your config.json file, then reload your save.";
                     QModServices.Main.AddCriticalMessage("Please add your Spotify client id and secret to your config.json file, then reload your save. Instructions are on the Nexus mod page.");
-                    currentTrackTitle = "Please add your Spotify client id and secret to your config.json file, then reload your save. Instructions are on the Nexus mod page.";
                     return;
                 }
 
@@ -172,6 +173,15 @@ namespace JukeboxSpotify
                 if (currentTrackTitle == defaultTitle) playingOnStartup = currentlyPlaying.IsPlaying;
 
                 spotifyIsPlaying = currentlyPlaying.IsPlaying;
+                
+                if (spotifyIsPlaying && jukeboxIsPaused)
+                {
+                    manualSpotifyPlay = true;
+                }
+                else if (!spotifyIsPlaying && !jukeboxIsPaused)
+                {
+                    manualSpotifyPause = true;
+                }
                 startingPosition = (uint) currentlyPlaying.ProgressMs;
 
                 if (MainPatcher.Config.IncludeArtistToggleValue)
@@ -196,11 +206,11 @@ namespace JukeboxSpotify
             catch(Exception e)
             {
                 QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Error, "Something went wrong getting track info.", e, false);
-                currentTrackTitle = "Spotify Jukebox Mod | If nothing plays, play/pause your Spotify app then try again.";
+                currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
                 if (MainPatcher.Config.deviceId == null) await GetDevice();
             }
 
-            if (plsRepeat) _ = SetInterval(GetTrackInfo, 5000);
+            if (plsRepeat) _ = SetInterval(GetTrackInfo, 3000);
         }
 
         public async static Task RunServer()
