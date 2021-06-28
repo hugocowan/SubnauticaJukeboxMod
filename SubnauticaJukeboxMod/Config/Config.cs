@@ -9,6 +9,9 @@ namespace JukeboxSpotify
         [Toggle("Pause Jukebox when you leave")]
         public bool PauseOnLeaveToggleValue = true;
 
+        [Toggle("Include Artist name in title")]
+        public bool IncludeArtistToggleValue = true;
+
         public string clientId;
 
         public string clientSecret;

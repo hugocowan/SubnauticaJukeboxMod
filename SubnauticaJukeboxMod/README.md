@@ -1,5 +1,5 @@
-﻿# To Do
+﻿# Welcome to the Jukebox Spotify Mod for Subnautica Below Zero!
 
-## Trying to set the position slider.
+This is the full source code for the game. Instructions on how to install the mod are on the Nexus mods modpage.
 
-* Nail'd it.
+If there's no license yet, it means I haven't gotten around to adding one and I don't yet know what license to use.

@@ -90,7 +90,7 @@ namespace JukeboxSpotify
             {
                 long trackPosition = (long) (Spotify.currentTrackLength * __instance._position); // _position is a percentage
                 //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "End drag occured. _position: " + __instance._position + " | trackPosition: " + trackPosition + " | trackLength: " + Spotify.currentTrackLength, null, true);
-                Spotify.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = Spotify.device.Id });
+                Spotify.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.timeTrackStarted = Time.time - trackPosition / 1000;
             }
         }
@@ -110,7 +110,7 @@ namespace JukeboxSpotify
             // This is needed for the first time we press play.
             if (!Jukebox.HasFile(__instance._file))
             {
-                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Jukebox doesn't have our track D:", null, true);
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Jukebox doesn't have our track D:", null, false);
                 Jukebox.Play(__instance);
                 return false;
             }

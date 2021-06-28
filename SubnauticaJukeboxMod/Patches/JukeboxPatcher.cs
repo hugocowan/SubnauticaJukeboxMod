@@ -26,21 +26,21 @@ namespace JukeboxSpotify
             if (forward)
             {
                 //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Skip next track", null, true);
-                await Spotify.client.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = Spotify.device.Id });
+                await Spotify.client.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.timeTrackStarted = Time.time;
                 Spotify.startingPosition = 1000;
             }
             else
             {
                 //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Skip previous track", null, true);
-                await Spotify.client.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = Spotify.device.Id });
+                await Spotify.client.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.timeTrackStarted = Time.time;
                 Spotify.startingPosition = 1000;
             }
 
             if (true != Spotify.jukeboxIsPlaying)
             {
-                await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
+                await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
             }
 
             Spotify.manualPause = false;
@@ -57,7 +57,7 @@ namespace JukeboxSpotify
             Spotify.volumeThrottler.Throttle(() => { }); // Clear the throttler
             if (!Spotify.playingOnStartup)
             {
-                var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id };
+                var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId };
                 Spotify.client.Player.PausePlayback(playbackRequest);
                 Spotify.jukeboxIsPlaying = null;
             }
@@ -77,7 +77,7 @@ namespace JukeboxSpotify
             try
             {
                 await Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume));
-                await Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify.device.Id });
+                await Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.spotifyIsPlaying = true;
             } catch
             {
@@ -92,7 +92,7 @@ namespace JukeboxSpotify
             //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Stop track", null, true);
             Spotify.jukeboxIsPlaying = null;
             Spotify.jukeboxIsPaused = false;
-            await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
+            await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
             Spotify.spotifyIsPlaying = false;
             Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100)));
             await Spotify.client.Player.SeekTo(new PlayerSeekToRequest(0));
@@ -160,7 +160,7 @@ namespace JukeboxSpotify
                     //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Resuming track cos of distance", null, true);
                     __instance._paused = false;
                     Spotify.jukeboxIsPaused = false;
-                    Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify.device.Id });
+                    Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                     Spotify.spotifyIsPlaying = true;
                 }
 
@@ -190,7 +190,7 @@ namespace JukeboxSpotify
                     //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "pausing track cos of distance. __instance._audible: " + __instance._audible + " | sqrMagnitude: " + sqrMagnitude, null, true);
                     __instance._paused = true;
                     Spotify.jukeboxIsPaused = true;
-                    Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
+                    Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                     Spotify.spotifyIsPlaying = false;
                 }
 
@@ -206,14 +206,14 @@ namespace JukeboxSpotify
             {
                 //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Pause track", null, true);
                 Spotify.jukeboxIsPaused = true;
-                Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Spotify.device.Id });
+                Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.spotifyIsPlaying = false;
             }
             else if (!__instance._paused && true == Spotify.jukeboxIsPaused && true == Spotify.jukeboxIsPlaying)
             {
                 //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Resume track", null, true);
                 Spotify.jukeboxIsPaused = false;
-                Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Spotify.device.Id });
+                Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.spotifyIsPlaying = true;
             }
         }

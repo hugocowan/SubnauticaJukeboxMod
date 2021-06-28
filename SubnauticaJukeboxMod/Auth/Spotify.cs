@@ -15,19 +15,18 @@ namespace JukeboxSpotify
         private static EmbedIOAuthServer _server;
         public static DebounceDispatcher trackDebouncer = new DebounceDispatcher(1000);
         public static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(250);
-        public static bool? jukeboxIsPlaying;
-        public static bool jukeboxIsPaused = false;
-        public static bool manualPause = false;
-        public static bool spotifyIsPlaying = false;
         public static bool repeatTrack = false;
-        public static bool playingOnStartup = false;
         public static bool justStarted;
         public static uint startingPosition = 0;
         public static SpotifyClient client;
-        public static Device device;
+        public static bool playingOnStartup = false;
+        public static bool spotifyIsPlaying = false;
+        public static bool? jukeboxIsPlaying;
+        public static bool manualPause = false;
+        public static bool jukeboxIsPaused = false;
         public static bool jukeboxNeedsUpdating = false;
         public static bool jukeboxNeedsPlaying = false;
-        public static string defaultTitle = "Spotify Jukebox Mod (If nothing plays, play/pause Spotify and try again)";
+        public static string defaultTitle = "Spotify Jukebox Mod";
         public static string currentTrackTitle = defaultTitle;
         public static uint currentTrackLength = 0;
         public static float timeTrackStarted = 0;
@@ -44,6 +43,7 @@ namespace JukeboxSpotify
                 if (null == MainPatcher.Config.clientId || null == MainPatcher.Config.clientSecret)
                 {
                     QModServices.Main.AddCriticalMessage("Please add your Spotify client id and secret to your config.json file, then reload your save. Instructions are on the Nexus mod page.");
+                    currentTrackTitle = "Please add your Spotify client id and secret to your config.json file, then reload your save. Instructions are on the Nexus mod page.";
                     return;
                 }
 
@@ -94,6 +94,8 @@ namespace JukeboxSpotify
                 DeviceResponse devices = await client.Player.GetAvailableDevices();
                 bool foundActiveDevice = false;
 
+                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "devices count: " + devices.Devices.Count, null, false);
+
                 if (null != MainPatcher.Config.deviceId)
                 {
                     availableDevice = new Device() { Id = MainPatcher.Config.deviceId };
@@ -117,14 +119,17 @@ namespace JukeboxSpotify
                 });
 
                 // If no active device was found, choose the first one in the devices list.
-                if (null == availableDevice)
+                if (null == availableDevice && devices.Devices.Count > 0)
                 {
-                    QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "No Spotify device found. Please play/pause your spotify client and reload your game.", null, false);
-
+                    MainPatcher.Config.deviceId = devices.Devices[0].Id;
+                    MainPatcher.Config.Save();
+                } 
+                else if (null == availableDevice)
+                {
+                    QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "No Spotify device found. Please play/pause your Spotify app.", null, false);
+                    currentTrackTitle = "No Spotify device found. Please play/pause your Spotify app then try again.";
                     return;
                 }
-
-                device = availableDevice;
             }
             catch (Exception e)
             {
@@ -142,7 +147,7 @@ namespace JukeboxSpotify
                 if (null == currentlyPlaying)
                 {
                     QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Playback not found", null, false);
-                    await client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { device.Id }));
+                    await client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { MainPatcher.Config.deviceId }));
                 }
 
                 var currentTrack = (FullTrack) currentlyPlaying.Item;
@@ -168,7 +173,22 @@ namespace JukeboxSpotify
 
                 spotifyIsPlaying = currentlyPlaying.IsPlaying;
                 startingPosition = (uint) currentlyPlaying.ProgressMs;
-                currentTrackTitle = currentTrack.Name;
+
+                if (MainPatcher.Config.IncludeArtistToggleValue)
+                {
+                    string artists = "";
+                    foreach(SimpleArtist artist in currentTrack.Artists)
+                    {
+                        artists += (artists == "") ? artist.Name : ", " + artist.Name;
+                    }
+                    currentTrackTitle = (MainPatcher.Config.IncludeArtistToggleValue) ? currentTrack.Name + " - " + artists : currentTrack.Name;
+
+                }
+                else
+                {
+                    currentTrackTitle = currentTrack.Name;
+                }
+
                 currentTrackLength = (uint) currentTrack.DurationMs;
                 jukeboxNeedsUpdating = true;
 
@@ -176,7 +196,8 @@ namespace JukeboxSpotify
             catch(Exception e)
             {
                 QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Error, "Something went wrong getting track info.", e, false);
-                if (device == null) await GetDevice();
+                currentTrackTitle = "Spotify Jukebox Mod | If nothing plays, play/pause your Spotify app then try again.";
+                if (MainPatcher.Config.deviceId == null) await GetDevice();
             }
 
             if (plsRepeat) _ = SetInterval(GetTrackInfo, 5000);
