@@ -3,7 +3,7 @@
   "DisplayName": "Jukebox Spotify",
   "Author": "boogaliwoogali",
   "Version": "1",
-  "Requires": [],
+  "Requires": [ "SMLHelper" ],
   "Enable": true,
   "Game": "BelowZero",
   "AssemblyName": "JukeboxSpotify.dll",
