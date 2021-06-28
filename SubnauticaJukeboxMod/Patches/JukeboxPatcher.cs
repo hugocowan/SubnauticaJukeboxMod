@@ -153,7 +153,7 @@ namespace JukeboxSpotify
             int volumePercentage = (int)(Spotify.jukeboxVolume * 100);
 
             // If music is audible, set the volume.
-            if (!Spotify.manualJukeboxPause && !__instance._paused && uGUI_SceneLoadingPatcher.loadingDone && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
+            if (!Spotify.manualJukeboxPause && uGUI_SceneLoadingPatcher.loadingDone && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
             {
                 volumePercentage = (int) ((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100);
 

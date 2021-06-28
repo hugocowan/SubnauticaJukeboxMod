@@ -22,7 +22,7 @@ namespace JukeboxSpotify
         [HarmonyPatch("OnGameResumed")]
         public async static void OnGameResumedPostfix()
         {
-            if (false == Spotify.jukeboxIsPlaying)
+            if (false == Spotify.jukeboxIsPlaying && !Spotify.manualJukeboxPause)
             {
                 QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Game resumed, resuming track", null, true);
                 Spotify.jukeboxIsPlaying = true;
