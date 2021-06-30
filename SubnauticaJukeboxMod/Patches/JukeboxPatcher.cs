@@ -140,7 +140,7 @@ namespace JukeboxSpotify
                     if (__instance._instance)
                     {
                         __instance._instance.file = "event:/jukebox/jukebox_one";
-                        Jukebox.position = 0;
+                        Jukebox.ERRCHECK(__instance._eventInstance.setTimelinePosition(0));
                         Jukebox.GetNext(__instance._instance, true);
                         Jukebox.Stop();
                         Jukebox.volume = Spotify.jukeboxVolume;
@@ -164,12 +164,12 @@ namespace JukeboxSpotify
                 __instance._length = Spotify.currentTrackLength;
 
                 Spotify.timeTrackStarted = Time.time - Spotify.startingPosition / 1000;
-                Jukebox.position = (uint)(Time.time - Spotify.timeTrackStarted) * 1000;
+                Jukebox.ERRCHECK(__instance._eventInstance.setTimelinePosition((int)(Time.time - Spotify.timeTrackStarted) * 1000));
 
                 // This updates the track label in the JukeboxInstance object. It's the only place it needs changing
-                if (null != __instance._instance && __instance._instance.file != Spotify.currentTrackTitle)
+                if (null != __instance._instance)
                 {
-                    __instance._instance.file = Spotify.currentTrackTitle;
+                    if (__instance._instance.file != Spotify.currentTrackTitle) __instance._instance.file = Spotify.currentTrackTitle;
                 }
 
                 if (Spotify.justStarted && Spotify.playingOnStartup)
@@ -193,7 +193,7 @@ namespace JukeboxSpotify
                 // If PauseOnLeaveToggleValue is true, make sure we resume playback
                 if (MainPatcher.Config.pauseOnLeave && Spotify.jukeboxIsPaused)
                 {
-                    new Log("Resuming track cos of distance");
+                    new Log("Resuming track - distance");
                     __instance._paused = false;
                     Spotify.jukeboxIsPaused = false;
                     Spotify.jukeboxIsPlaying = true;
@@ -227,7 +227,7 @@ namespace JukeboxSpotify
                 // If PauseOnLeaveToggleValue is true, make sure we pause playback
                 if (MainPatcher.Config.pauseOnLeave && !Spotify.jukeboxIsPaused)
                 {
-                    new Log("pausing track cos of distance.");
+                    new Log("pausing track - distance.");
                     __instance._paused = true;
                     Spotify.jukeboxIsPaused = true;
                     Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
@@ -239,11 +239,8 @@ namespace JukeboxSpotify
                     Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(0)));
                     Spotify.spotifyVolume = 0;
                 }
-            }
-
-
-            // Pause/Resume Spotify as needed.
-            if (uGUI_SceneLoadingPatcher.loadingDone && ((Spotify.manualSpotifyPause && !Spotify.manualJukeboxPlay) || __instance._paused || Spotify.menuPause) && false == Spotify.jukeboxIsPaused)
+            } 
+            else if (uGUI_SceneLoadingPatcher.loadingDone && ((Spotify.manualSpotifyPause && !Spotify.manualJukeboxPlay) || __instance._paused || Spotify.menuPause) && false == Spotify.jukeboxIsPaused)
             {
                 if (Spotify.manualSpotifyPause && null != __instance._instance)
                 {
@@ -266,8 +263,8 @@ namespace JukeboxSpotify
                 {
                     if (null == __instance._instance)
                     {
+                        new Log("No instance exists, creating instance");
                         __instance._instance = new JukeboxInstance();
-                        //__instance._instance.file = Spotify.currentTrackTitle;
                         Spotify.jukeboxNeedsPlaying = true;
                         __instance._instance.UpdateUI();
                     }
