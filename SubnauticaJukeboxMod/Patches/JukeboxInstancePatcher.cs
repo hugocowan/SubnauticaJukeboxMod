@@ -11,25 +11,28 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.SetLabel))]
         static void SetLabelPrefix(ref string text)
         {
+            if (!MainPatcher.Config.enableModToggle) return;
+            new Log("Setting label to " + Spotify.currentTrackTitle, null);
             text = Spotify.currentTrackTitle;
-            //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Setting label to " + Spotify.currentTrackTitle, null, true);
         }
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.SetLength))]
         static void SetLengthPrefix(ref uint length)
         {
+            if (!MainPatcher.Config.enableModToggle) return;
             length = Spotify.currentTrackLength;
-            //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Setting length to " + Spotify.currentTrackLength + "ms | " + mins + "m" + secs + "s");
+            //new Log("Setting length"); // runs all the time
         }
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.UpdateUI))]
         static void UpdateUIPrefix(JukeboxInstance __instance)
         {
+            if (!MainPatcher.Config.enableModToggle) return;
             if (Spotify.jukeboxNeedsPlaying && null != __instance)
             {
-                //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "jukeboxNeedsPlaying: " + Spotify.jukeboxNeedsPlaying, null, true);
+                new Log("jukeboxNeedsPlaying: " + Spotify.jukeboxNeedsPlaying, null);
                 Spotify.jukeboxNeedsPlaying = false;
                 Jukebox.Play(__instance);
             }
@@ -39,6 +42,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.OnVolume))]
         public static void OnVolumePostfix(JukeboxInstance __instance)
         {
+            if (!MainPatcher.Config.enableModToggle) return;
             int volumePercentage = (int) (__instance.volume * 100);
 
             Spotify.spotifyVolume = volumePercentage;
@@ -51,6 +55,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonShuffle))]
         public static void OnButtonShufflePostFix(JukeboxInstance __instance)
         {
+            if (!MainPatcher.Config.enableModToggle) return;
             Spotify.client.Player.SetShuffle(new PlayerShuffleRequest(__instance.shuffle));
         }        
         
@@ -58,7 +63,8 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonRepeat))]
         public static void OnButtonRepeatPostFix(JukeboxInstance __instance)
         {
-            //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Repeat button pressed. repeat: " + __instance.repeat.ToString(), null, true);
+            if (!MainPatcher.Config.enableModToggle) return;
+            new Log("Repeat button pressed");
 
             PlayerSetRepeatRequest.State state;
 
@@ -85,10 +91,11 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.OnPositionEndDrag))]
         public static void OnPositionEndDragPostFix(JukeboxInstance __instance)
         {
+            if (!MainPatcher.Config.enableModToggle) return;
             if (true == Spotify.jukeboxIsPlaying || true == Spotify.jukeboxIsPaused)
             {
                 long trackPosition = (long) (Spotify.currentTrackLength * __instance._position); // _position is a percentage
-                //QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "End drag occured. _position: " + __instance._position + " | trackPosition: " + trackPosition + " | trackLength: " + Spotify.currentTrackLength, null, true);
+                new Log("End drag occured");
                 Spotify.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.timeTrackStarted = Time.time - trackPosition / 1000;
             }
@@ -98,6 +105,16 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonPlayPause))]
         public static bool OnButtonPlayPausePreFix(JukeboxInstance __instance)
         {
+            // This is to stop the method getting called very quickly after the first one.
+            if (Spotify.playPauseTimeout + 0.5 > Time.time)
+            {
+                new Log("very fast consecutive call to method");
+                return false;
+            }
+
+            Spotify.playPauseTimeout = Time.time;
+
+            if (!MainPatcher.Config.enableModToggle) return true;
             if (!Jukebox.main._paused)
             {
                 Spotify.manualJukeboxPause = true;
@@ -109,7 +126,7 @@ namespace JukeboxSpotify
             // This is needed for the first time we press play.
             if (!Jukebox.HasFile(__instance._file))
             {
-                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Jukebox doesn't have our track D:", null, false);
+                new Log("Jukebox doesn't have our track D:");
                 Jukebox.Play(__instance);
                 return false;
             }

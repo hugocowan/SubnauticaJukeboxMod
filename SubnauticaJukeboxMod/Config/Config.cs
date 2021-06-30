@@ -1,4 +1,5 @@
 ﻿using SMLHelper.V2.Json;
+using SMLHelper.V2.Options;
 using SMLHelper.V2.Options.Attributes;
 
 namespace JukeboxSpotify
@@ -6,11 +7,17 @@ namespace JukeboxSpotify
     [Menu("JukeboxSpotify", LoadOn = MenuAttribute.LoadEvents.MenuRegistered | MenuAttribute.LoadEvents.MenuOpened)]
     public class Config : ConfigFile
     {
+        [Toggle("Enable/Disable the Jukebox mod"), OnChange(nameof(MyCheckboxToggleEvent))]
+        public bool enableModToggle = true;
+
         [Toggle("Pause Jukebox when you leave")]
-        public bool PauseOnLeaveToggleValue = true;
+        public bool pauseOnLeave = true;
 
         [Toggle("Include Artist name in title")]
-        public bool IncludeArtistToggleValue = true;
+        public bool includeArtist = true;
+
+        [Toggle("Enable logging (for debugging)")]
+        public bool logging = false;
 
         public string clientId;
 
@@ -19,5 +26,10 @@ namespace JukeboxSpotify
         public string refreshToken;
 
         public string deviceId;
+
+        private void MyCheckboxToggleEvent(ToggleChangedEventArgs e)
+        {
+            if (!e.Value) Spotify.resetJukebox = true;
+        }
     }
 }

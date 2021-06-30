@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using SpotifyAPI.Web;
 
 namespace JukeboxSpotify
 {
@@ -8,26 +7,18 @@ namespace JukeboxSpotify
     {
         [HarmonyPostfix]
         [HarmonyPatch("OnGamePaused")]
-        public async static void OnGamePausedPostfix()
+        public static void OnGamePausedPostfix()
         {
-            if (true == Spotify.jukeboxIsPlaying)
-            {
-                //Logger.Log(Logger.Level.Info, "Game paused, pausing track", null, true);
-                Spotify.jukeboxIsPlaying = false;
-                await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
-            }
+            if (!MainPatcher.Config.enableModToggle) return;
+            Spotify.menuPause = true;
         }
 
         [HarmonyPostfix]
         [HarmonyPatch("OnGameResumed")]
-        public async static void OnGameResumedPostfix()
+        public static void OnGameResumedPostfix()
         {
-            if (false == Spotify.jukeboxIsPlaying && !Spotify.manualJukeboxPause)
-            {
-                QModManager.Utility.Logger.Log(QModManager.Utility.Logger.Level.Info, "Game resumed, resuming track", null, true);
-                Spotify.jukeboxIsPlaying = true;
-                await Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
-            }
+            if (!MainPatcher.Config.enableModToggle) return;
+            Spotify.menuPause = false;
         }
 
     }

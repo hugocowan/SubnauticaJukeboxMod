@@ -2,10 +2,11 @@
   "Id": "JukeboxSpotify",
   "DisplayName": "Jukebox Spotify Mod",
   "Author": "boogaliwoogali",
-  "Version": "1",
+  "Version": "1.1",
   "Requires": [ "SMLHelper" ],
   "Enable": true,
   "Game": "BelowZero",
   "AssemblyName": "JukeboxSpotify.dll",
+  "NexusId": { "BelowZero": "215" },
   "Config": {}
 }
