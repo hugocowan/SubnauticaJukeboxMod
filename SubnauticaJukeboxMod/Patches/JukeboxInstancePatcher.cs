@@ -106,6 +106,7 @@ namespace JukeboxSpotify
         public static bool OnButtonPlayPausePreFix(JukeboxInstance __instance)
         {
             // This is to stop the method getting called very quickly after the first one.
+            if (!MainPatcher.Config.enableModToggle) return true;
             if (Spotify.playPauseTimeout + 0.5 > Time.time)
             {
                 new Log("very fast consecutive call to method");
@@ -114,8 +115,15 @@ namespace JukeboxSpotify
 
             Spotify.playPauseTimeout = Time.time;
 
-            if (!MainPatcher.Config.enableModToggle) return true;
-            if (!Jukebox.main._paused)
+            if (__instance != Spotify.currentInstance)
+            {
+                new Log("New JukeboxInstance does not match previous JukeboxInstance. New instance volume: " + __instance.volume);
+                Spotify.currentInstance = __instance;
+                Jukebox.volume = __instance.volume;
+                Spotify.jukeboxVolume = __instance.volume;
+                Spotify.manualJukeboxPause = false;
+            }
+            else if (!Spotify.jukeboxIsPaused)
             {
                 Spotify.manualJukeboxPause = true;
             } 

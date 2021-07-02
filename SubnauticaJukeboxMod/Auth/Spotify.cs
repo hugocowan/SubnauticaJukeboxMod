@@ -37,6 +37,8 @@ namespace JukeboxSpotify
         public static int spotifyVolume = 100;
         public static float jukeboxVolume = Jukebox.volume;
         public static bool resetJukebox = false;
+        public static JukeboxInstance currentInstance = null;
+        public static int volumeModifier = 1;
 
         public async static Task SpotifyLogin()
         {
@@ -74,12 +76,13 @@ namespace JukeboxSpotify
                     await Task.Delay(1000);
                 }
 
+                justStarted = true;
+
                 await GetDevice();
 
                 await Retry.Do(() => GetTrackInfo(true), TimeSpan.FromSeconds(1));
 
                 new Log("Spotify successfully loaded");
-                justStarted = true;
 
             }
             catch (Exception e)
@@ -177,11 +180,11 @@ namespace JukeboxSpotify
 
                 spotifyIsPlaying = currentlyPlaying.IsPlaying;
                 
-                if (spotifyIsPlaying && jukeboxIsPaused)
+                if (spotifyIsPlaying && jukeboxIsPaused && !justStarted)
                 {
                     manualSpotifyPlay = true;
                 }
-                else if (!spotifyIsPlaying && !jukeboxIsPaused)
+                else if (!spotifyIsPlaying && !jukeboxIsPaused && !justStarted)
                 {
                     manualSpotifyPause = true;
                 }
@@ -211,6 +214,11 @@ namespace JukeboxSpotify
                 new Error("Something went wrong getting track info.", e);
                 currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
                 if (MainPatcher.Config.deviceId == null) await GetDevice();
+                if (e.Message == "The access token expired")
+                {
+                    new Log("Refreshing session in attempt to get a new access token");
+                    await RefreshSession();
+                }
             }
 
             if (plsRepeat) _ = SetInterval(GetTrackInfo, 3000);
@@ -263,6 +271,7 @@ namespace JukeboxSpotify
 
         private static async Task OnErrorReceived(object sender, string error, string state)
         {
+            new Error("Server failed: " + error);
             await _server.Stop();
         }
 
@@ -272,11 +281,13 @@ namespace JukeboxSpotify
               new AuthorizationCodeRefreshRequest(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, MainPatcher.Config.refreshToken)
             );
 
+            new Log("Refreshing the Spotify session. time till next refresh: " + (newResponse.ExpiresIn * 1000 - 50));
+
             client = new SpotifyClient(newResponse.AccessToken);
-            var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn - 50);
+            var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn * 1000 - 1000);
         }
 
-        private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 50)
+        private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 1000)
         {
             await Task.Delay(timeout).ConfigureAwait(false);
             var run = method(true);
