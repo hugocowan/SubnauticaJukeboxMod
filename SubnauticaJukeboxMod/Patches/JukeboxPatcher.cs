@@ -130,6 +130,7 @@ namespace JukeboxSpotify
                 if (!MainPatcher.Config.enableModToggle) return;
                 Spotify.jukeboxIsPlaying = null;
                 Spotify.jukeboxIsPaused = false;
+                Spotify.manualJukeboxPause = true;
                 if (Spotify.spotifyIsPlaying) await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.spotifyIsPlaying = false;
                 Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100)));
