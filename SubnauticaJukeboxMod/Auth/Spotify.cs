@@ -93,20 +93,19 @@ namespace JukeboxSpotify
 
         public async static Task GetDevice()
         {
-            // Get an available device to play tracks with.
-            Device availableDevice = null;
-
             try
             {
+                // Get an available device to play tracks with.
+                Device availableDevice = null;
                 DeviceResponse devices = await client.Player.GetAvailableDevices();
                 bool foundActiveDevice = false;
 
-              //new Log("devices count: " + devices.Devices.Count, null);
+                //new Log("devices count: " + devices.Devices.Count, null);
 
                 if (null != MainPatcher.Config.deviceId)
                 {
                     availableDevice = new Device() { Id = MainPatcher.Config.deviceId };
-                  //new Log("Pre-loaded latest device from config.json in case we need it: " + availableDevice.Id, null);
+                    //new Log("Pre-loaded latest device from config.json in case we need it: " + availableDevice.Id, null);
                 }
 
                 devices.Devices.ForEach(delegate (Device device)
@@ -128,6 +127,7 @@ namespace JukeboxSpotify
                 // If no active device was found, choose the first one in the devices list.
                 if (null == availableDevice && devices.Devices.Count > 0)
                 {
+                    new Log("Spotify device found");
                     MainPatcher.Config.deviceId = devices.Devices[0].Id;
                     MainPatcher.Config.Save();
                 } 
@@ -150,7 +150,8 @@ namespace JukeboxSpotify
             try
             {
                 var currentlyPlaying = await client.Player.GetCurrentPlayback();
-                
+
+
                 if (null == currentlyPlaying)
                 {
                     new Log("Playback not found");
@@ -158,6 +159,7 @@ namespace JukeboxSpotify
                 }
 
                 var currentTrack = (FullTrack) currentlyPlaying.Item;
+
 
                 if (uGUI_SceneLoadingPatcher.loadingDone && null != Jukebox.main._instance)
                 {
@@ -172,7 +174,6 @@ namespace JukeboxSpotify
                     //    Jukebox.main._instance.OnButtonRepeat();
                     //    await Task.Delay(500);
                     //}
-
                     if (Jukebox.shuffle != currentlyPlaying.ShuffleState) Jukebox.main._instance.OnButtonShuffle();
                 }
 
@@ -188,6 +189,7 @@ namespace JukeboxSpotify
                 {
                     manualSpotifyPause = true;
                 }
+
                 startingPosition = (uint) currentlyPlaying.ProgressMs;
 
                 if (MainPatcher.Config.includeArtist)
@@ -207,11 +209,10 @@ namespace JukeboxSpotify
 
                 currentTrackLength = (uint) currentTrack.DurationMs;
                 jukeboxNeedsUpdating = true;
-
             } 
             catch(Exception e)
             {
-                new Error("Something went wrong getting track info.", e);
+                new Error("Something went wrong getting track info", e);
                 currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
                 if (MainPatcher.Config.deviceId == null) await GetDevice();
                 if (e.Message == "The access token expired")
@@ -226,71 +227,115 @@ namespace JukeboxSpotify
 
         public async static Task RunServer()
         {
-            _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
-            await _server.Start();
-
-            _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-            _server.ErrorReceived += OnErrorReceived;
-
-            var request = new LoginRequest(_server.BaseUri, MainPatcher.Config.clientId, LoginRequest.ResponseType.Code)
+            try
             {
-                Scope = new[] { Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState }
-            };
-            BrowserUtil.Open(request.ToUri());
+                _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
+                await _server.Start();
+
+                _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+                _server.ErrorReceived += OnErrorReceived;
+
+                var request = new LoginRequest(_server.BaseUri, MainPatcher.Config.clientId, LoginRequest.ResponseType.Code)
+                {
+                    Scope = new[] { Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState }
+                };
+                BrowserUtil.Open(request.ToUri());
+            }
+            catch (Exception e)
+            {
+                new Error("Something went wrong running the server", e);
+            }
         }
 
         private async static Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
         {
-            await _server.Stop();
-            await SetupSpotifyClient(response.Code, true);
+            try
+            {
+                await _server.Stop();
+                await SetupSpotifyClient(response.Code, true);
+            }
+            catch (Exception e)
+            {
+                new Error("Something went wrong receiving the Authorization code", e);
+            }
         }
 
         private async static Task SetupSpotifyClient(string code, bool saveToConfig = false)
         {
-            // Get the access token and set up the SpotifyClient.
-            SpotifyClientConfig config = SpotifyClientConfig.CreateDefault();
-            var tokenResponse = await new OAuthClient(config).RequestToken(
-              new AuthorizationCodeTokenRequest(
-                MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, code, new Uri("http://localhost:5000/callback")
-              )
-            );
-
-            if (saveToConfig)
+            try
             {
-                MainPatcher.Config.refreshToken = tokenResponse.RefreshToken;
-                MainPatcher.Config.Save();
+                // Get the access token and set up the SpotifyClient.
+                SpotifyClientConfig config = SpotifyClientConfig.CreateDefault();
+                var tokenResponse = await new OAuthClient(config).RequestToken(
+                  new AuthorizationCodeTokenRequest(
+                    MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, code, new Uri("http://localhost:5000/callback")
+                  )
+                );
+
+                if (saveToConfig)
+                {
+                    MainPatcher.Config.refreshToken = tokenResponse.RefreshToken;
+                    MainPatcher.Config.Save();
+                }
+
+                config = SpotifyClientConfig
+                    .CreateDefault()
+                    .WithAuthenticator(new AuthorizationCodeAuthenticator(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, tokenResponse));
+
+                client = new SpotifyClient(config);
             }
-
-
-            config = SpotifyClientConfig
-                .CreateDefault()
-                .WithAuthenticator(new AuthorizationCodeAuthenticator(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, tokenResponse));
-
-            client = new SpotifyClient(config);
+            catch (Exception e)
+            {
+                new Error("Something went wrong setting up the Spotify client", e);
+            }
         }
 
         private static async Task OnErrorReceived(object sender, string error, string state)
         {
-            new Error("Server failed: " + error);
-            await _server.Stop();
+            try
+            {
+                new Error("Server failed: " + error);
+                await _server.Stop();
+            }
+            catch (Exception e)
+            {
+                new Error("Something went wrong while stopping the server after an error", e);
+            }
+
+            
         }
 
         private async static Task RefreshSession(bool plsRepeat = false)
         {
-            var newResponse = await new OAuthClient().RequestToken(
-              new AuthorizationCodeRefreshRequest(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, MainPatcher.Config.refreshToken)
-            );
+            try
+            {
+                var newResponse = await new OAuthClient().RequestToken(
+                  new AuthorizationCodeRefreshRequest(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, MainPatcher.Config.refreshToken)
+                );
 
-            new Log("Refreshing the Spotify session. time till next refresh: " + (newResponse.ExpiresIn * 1000 - 50));
+                new Log("Refreshing the Spotify session. time till next refresh: " + (newResponse.ExpiresIn * 1000 - 50));
 
-            client = new SpotifyClient(newResponse.AccessToken);
-            var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn * 1000 - 1000);
+                client = new SpotifyClient(newResponse.AccessToken);
+                var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn * 1000 - 1000);
+            }
+            catch (Exception e)
+            {
+                new Error("Something went wrong refreshing the Spotify session", e);
+            }
+
         }
 
         private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 1000)
         {
-            await Task.Delay(timeout).ConfigureAwait(false);
-            var run = method(true);
+            try
+            {
+                await Task.Delay(timeout).ConfigureAwait(false);
+                var run = method(true);
+            }
+            catch (Exception e)
+            {
+                new Error("Something went wrong setting the interval", e);
+            }
         }
     }
 }
