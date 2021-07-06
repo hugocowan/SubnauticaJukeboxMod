@@ -16,6 +16,9 @@ namespace JukeboxSpotify
         [Toggle("Include Artist name in title")]
         public bool includeArtist = true;
 
+        [Toggle("Double press ■ for song start")]
+        public bool stopTwiceForStart = false;
+
         [Toggle("Enable logging (for debugging)")]
         public bool logging = false;
 

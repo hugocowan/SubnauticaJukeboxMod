@@ -7,7 +7,7 @@ namespace JukeboxSpotify
     {
         public Error(string message, Exception e = null)
         {
-            if (MainPatcher.Config.logging) Logger.Log(Logger.Level.Warn, message + ": ", e, true);
+            if (MainPatcher.Config.logging) Logger.Log(Logger.Level.Warn, message + (e != null ? ": " : ""), e, true);
         }
     }
 }

@@ -3,8 +3,8 @@ using QModManager.API;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
+using UnityEngine;
 
 namespace JukeboxSpotify
 {
@@ -37,22 +37,32 @@ namespace JukeboxSpotify
         public static int spotifyVolume = 100;
         public static float jukeboxVolume = Jukebox.volume;
         public static bool resetJukebox = false;
+        public static bool noTrack;
+        public static bool quitting;
         public static JukeboxInstance currentInstance = null;
         public static int volumeModifier = 1;
+        public static int stopCounter = 0;
+        public static float getTrackTimer = 0;
+        public static float refreshSessionTimer = 0;
+        public static float refreshSessionExpiryTime = 3600;
+        public static float volumeTimer = 0;
 
         public async static Task SpotifyLogin()
         {
             try
             {
-                // Check the config for a stored refresh token
-
-                if (null == MainPatcher.Config.clientId || null == MainPatcher.Config.clientSecret)
+                // Check the config for the clientId and clientSecret
+                if (null == MainPatcher.Config.clientId || null == MainPatcher.Config.clientSecret || "paste_client_id_here" == MainPatcher.Config.clientId || "paste_client_secret_here" == MainPatcher.Config.clientSecret)
                 {
                     currentTrackTitle = "Follow instructions on the Nexus mod page to add your Spotify client id and secret to your config.json file, then reload your save.";
+                    MainPatcher.Config.clientId = "paste_client_id_here";
+                    MainPatcher.Config.clientSecret = "paste_client_secret_here";
+                    MainPatcher.Config.Save();
                     QModServices.Main.AddCriticalMessage("Please add your Spotify client id and secret to your config.json file, then reload your save. Instructions are on the Nexus mod page.");
                     return;
                 }
 
+                // Check the config for a stored refresh token
                 if (null != MainPatcher.Config.refreshToken)
                 {
                     try
@@ -80,7 +90,7 @@ namespace JukeboxSpotify
 
                 await GetDevice();
 
-                await Retry.Do(() => GetTrackInfo(true), TimeSpan.FromSeconds(1));
+                await GetTrackInfo();
 
                 new Log("Spotify successfully loaded");
 
@@ -130,7 +140,7 @@ namespace JukeboxSpotify
                     new Log("Spotify device found");
                     MainPatcher.Config.deviceId = devices.Devices[0].Id;
                     MainPatcher.Config.Save();
-                } 
+                }
                 else if (null == availableDevice)
                 {
                     new Log("No Spotify device found. Please play/pause your Spotify app.");
@@ -145,21 +155,22 @@ namespace JukeboxSpotify
         }
 
         // Update what's currently playing.
-        public async static Task GetTrackInfo(bool plsRepeat = false)
+        public async static Task GetTrackInfo()
         {
             try
             {
                 var currentlyPlaying = await client.Player.GetCurrentPlayback();
 
-
-                if (null == currentlyPlaying)
+                if (null == currentlyPlaying || null == currentlyPlaying.Item)
                 {
-                    new Log("Playback not found");
-                    await client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { MainPatcher.Config.deviceId }));
+                    noTrack = true;
+                    new Error("Playback not found");
+                    if (MainPatcher.Config.deviceId == null) await GetDevice();
+                    currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
+                    return;
                 }
 
-                var currentTrack = (FullTrack) currentlyPlaying.Item;
-
+                var currentTrack = (FullTrack)currentlyPlaying.Item;
 
                 if (uGUI_SceneLoadingPatcher.loadingDone && null != Jukebox.main._instance)
                 {
@@ -179,8 +190,12 @@ namespace JukeboxSpotify
 
                 if (currentTrackTitle == defaultTitle) playingOnStartup = currentlyPlaying.IsPlaying;
 
+                string oldTrackTitle = currentTrackTitle;
                 spotifyIsPlaying = currentlyPlaying.IsPlaying;
-                
+                startingPosition = (uint)currentlyPlaying.ProgressMs;
+                currentTrackLength = (uint)currentTrack.DurationMs;
+                noTrack = false;
+
                 if (spotifyIsPlaying && jukeboxIsPaused && !justStarted)
                 {
                     manualSpotifyPlay = true;
@@ -190,27 +205,23 @@ namespace JukeboxSpotify
                     manualSpotifyPause = true;
                 }
 
-                startingPosition = (uint) currentlyPlaying.ProgressMs;
-
                 if (MainPatcher.Config.includeArtist)
                 {
                     string artists = "";
-                    foreach(SimpleArtist artist in currentTrack.Artists)
+                    foreach (SimpleArtist artist in currentTrack.Artists)
                     {
                         artists += (artists == "") ? artist.Name : ", " + artist.Name;
                     }
                     currentTrackTitle = (MainPatcher.Config.includeArtist) ? currentTrack.Name + " - " + artists : currentTrack.Name;
-
                 }
                 else
                 {
                     currentTrackTitle = currentTrack.Name;
                 }
 
-                currentTrackLength = (uint) currentTrack.DurationMs;
-                jukeboxNeedsUpdating = true;
-            } 
-            catch(Exception e)
+                if (uGUI_SceneLoadingPatcher.loadingDone && (playingOnStartup || !menuPause && true == jukeboxIsPlaying || oldTrackTitle != currentTrackTitle)) jukeboxNeedsUpdating = true;
+            }
+            catch (Exception e)
             {
                 new Error("Something went wrong getting track info", e);
                 currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
@@ -221,8 +232,6 @@ namespace JukeboxSpotify
                     await RefreshSession();
                 }
             }
-
-            if (plsRepeat) _ = SetInterval(GetTrackInfo, 3000);
         }
 
         public async static Task RunServer()
@@ -301,11 +310,9 @@ namespace JukeboxSpotify
             {
                 new Error("Something went wrong while stopping the server after an error", e);
             }
-
-            
         }
 
-        private async static Task RefreshSession(bool plsRepeat = false)
+        public async static Task RefreshSession()
         {
             try
             {
@@ -313,28 +320,14 @@ namespace JukeboxSpotify
                   new AuthorizationCodeRefreshRequest(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, MainPatcher.Config.refreshToken)
                 );
 
-                new Log("Refreshing the Spotify session. time till next refresh: " + (newResponse.ExpiresIn * 1000 - 50));
-
                 client = new SpotifyClient(newResponse.AccessToken);
-                var repeat = SetInterval(RefreshSession, newResponse.ExpiresIn * 1000 - 1000);
+                new Log("Refreshed the Spotify session.");
+                refreshSessionExpiryTime = newResponse.ExpiresIn;
+                refreshSessionTimer = Time.time;
             }
             catch (Exception e)
             {
                 new Error("Something went wrong refreshing the Spotify session", e);
-            }
-
-        }
-
-        private static async Task SetInterval(Func<bool, Task> method, int timeout = 36000 - 1000)
-        {
-            try
-            {
-                await Task.Delay(timeout).ConfigureAwait(false);
-                var run = method(true);
-            }
-            catch (Exception e)
-            {
-                new Error("Something went wrong setting the interval", e);
             }
         }
     }

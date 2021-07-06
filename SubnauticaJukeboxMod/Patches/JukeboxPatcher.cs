@@ -14,7 +14,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle) return;
+                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
 
                 if (Spotify.repeatTrack)
                 {
@@ -41,21 +41,19 @@ namespace JukeboxSpotify
                     Spotify.startingPosition = 1000;
                 }
 
-                if (true != Spotify.jukeboxIsPlaying && Spotify.spotifyIsPlaying)
+                if (true != Spotify.jukeboxIsPlaying)
                 {
                     await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 }
 
                 Spotify.manualJukeboxPause = false;
                 Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume)));
-                await Spotify.trackDebouncer.DebounceAsync(() => Spotify.GetTrackInfo());
             }
             catch (Exception e)
             {
                 new Error("Something went wrong with stopping the track", e);
             }
         }
-
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Jukebox.OnApplicationQuit))]
@@ -64,7 +62,8 @@ namespace JukeboxSpotify
             try
             {
                 new Log("Application Quit");
-                if (!MainPatcher.Config.enableModToggle) return;
+                Spotify.quitting = true;
+                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
                 Spotify.trackDebouncer.Debounce(() => { }); // Clear the debouncer
                 Spotify.volumeThrottler.Throttle(() => { }); // Clear the throttler
                 if (!Spotify.playingOnStartup)
@@ -73,6 +72,7 @@ namespace JukeboxSpotify
                     if (Spotify.spotifyIsPlaying) Spotify.client.Player.PausePlayback(playbackRequest);
                     Spotify.jukeboxIsPlaying = null;
                 }
+                
                 Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100));
             }
             catch (Exception e)
@@ -87,7 +87,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle) return;
+                if (!MainPatcher.Config.enableModToggle || null == Spotify.client) return;
                 new Log("Play track");
                 Jukebox.volume = 0;
                 Spotify.jukeboxIsPlaying = true;
@@ -116,39 +116,13 @@ namespace JukeboxSpotify
             {
                 new Error("Something went wrong with playing the track", e);
             }
-
-            
-        }
-
-        [HarmonyPostfix]
-        [HarmonyPatch(nameof(Jukebox.StopInternal))]
-        public async static void StopInternalPostfix()
-        {
-            try
-            {
-                new Log("Stop track");
-                if (!MainPatcher.Config.enableModToggle) return;
-                Spotify.jukeboxIsPlaying = null;
-                Spotify.jukeboxIsPaused = false;
-                Spotify.manualJukeboxPause = true;
-                if (Spotify.spotifyIsPlaying) await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
-                Spotify.spotifyIsPlaying = false;
-                Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100)));
-                await Spotify.client.Player.SeekTo(new PlayerSeekToRequest(0));
-                Spotify.timeTrackStarted = Time.time;
-                Spotify.startingPosition = 0;
-            } catch(Exception e)
-            {
-                new Error("Something went wrong with stopping the track", e);
-            }
-            
         }
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Jukebox.HandleOpenError))]
         public static void HandleOpenErrorPostfix(Jukebox __instance)
         {
-            if (!MainPatcher.Config.enableModToggle) return;
+            if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
             new Log("We have an open error D: this._failed: " + __instance._failed);
         }
 
@@ -156,7 +130,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(Jukebox.UpdateLowLevel))]
         public static void UpdateLowLevelPrefix(Jukebox __instance)
         {
-            if (!MainPatcher.Config.enableModToggle) return;
+            if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
             __instance._file = "event:/jukebox/jukebox_one"; // This avoids errors and generally makes the jukebox very, Very happy.
         }
 
@@ -166,8 +140,24 @@ namespace JukeboxSpotify
         {
             try
             {
+                if (MainPatcher.Config.enableModToggle && null != Spotify.client)
+                {
+                    // Keep checking for track updates
+                    if (Time.time > (Spotify.getTrackTimer + 3))
+                    {
+                        Spotify.getTrackTimer = Time.time;
+                        _ = Spotify.GetTrackInfo();
+                    }
+
+                    // Keep the Spotify access token up to date
+                    if (Spotify.refreshSessionTimer != 0 && Time.time > (Spotify.refreshSessionTimer + Spotify.refreshSessionExpiryTime - 2))
+                    {
+                        _ = Spotify.RefreshSession();
+                    }
+                }
+
                 // If the mod has been disabled, make sure the jukebox is reset.
-                if (!MainPatcher.Config.enableModToggle)
+                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client)
                 {
                     if (Spotify.resetJukebox)
                     {
@@ -192,26 +182,33 @@ namespace JukeboxSpotify
 
                 if (0 != Jukebox.volume) Jukebox.volume = 0; // If we have toggled the mod off/on, this will not be 0 anymore.
 
-                //new Log("Yo. null == __instance: " + (null == __instance));
-                if (Jukebox.isStartingOrPlaying && Spotify.jukeboxNeedsUpdating)
+                if (Spotify.jukeboxNeedsUpdating)
                 {
+                    Spotify.jukeboxNeedsUpdating = false;
                     if (!__instance._playlist.Contains(Spotify.currentTrackTitle)) __instance._playlist.Add(Spotify.currentTrackTitle);
 
-                    //new Log("Update Jukebox.");
-                    Spotify.jukeboxNeedsUpdating = false;
-
                     // This makes sure the timeline length is right.
-                    __instance._length = Spotify.currentTrackLength;
+                    if (__instance._length != Spotify.currentTrackLength) __instance._length = Spotify.currentTrackLength;
 
                     Spotify.timeTrackStarted = Time.time - Spotify.startingPosition / 1000;
+                    float currentPosition = (Time.time - Spotify.timeTrackStarted);
 
-                    Jukebox.position = (uint)(Time.time - Spotify.timeTrackStarted) * 1000;
+                    if (Math.Abs((Jukebox.position / 1000) - currentPosition) > 1) Jukebox.position = (uint)currentPosition * 1000;
 
                     // This updates the track label in the JukeboxInstance object. It's the only place it needs changing
                     if (null != __instance._instance)
                     {
                         Spotify.currentInstance = __instance._instance;
                         if (__instance._instance.file != Spotify.currentTrackTitle) __instance._instance.file = Spotify.currentTrackTitle;
+                    } 
+                    else
+                    {
+                        for (int i = 0; i < JukeboxInstance.all.Count; i++)
+                        {
+                            JukeboxInstance jukeboxInstance = JukeboxInstance.all[i];
+                            jukeboxInstance.SetLabel(Spotify.currentTrackTitle);
+                            jukeboxInstance.SetLength(Spotify.currentTrackLength);
+                        }
                     }
 
                     if (Spotify.justStarted && Spotify.playingOnStartup)
@@ -256,6 +253,15 @@ namespace JukeboxSpotify
                     {
                         volumePercentage /= 2;
                     }
+
+                    if (Math.Abs(Spotify.spotifyVolume - volumePercentage) <= 1 && Time.time > (Spotify.volumeTimer + 2))
+                    {
+                        // The volume has been the same for 2 seconds, let's give poor Spotify a break from volume requests.
+                        return;
+                    }
+
+                    if (Math.Abs(Spotify.spotifyVolume - volumePercentage) > 1) Spotify.volumeTimer = Time.time;
+
                     volumePercentage += Spotify.volumeModifier; // This ensures Spotify has sound when it's paused/has 0 volume.
                     Spotify.volumeModifier = (Spotify.volumeModifier < 0) ? 0 : -1;
 
@@ -264,6 +270,7 @@ namespace JukeboxSpotify
 
                     Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
                     Spotify.spotifyVolume = volumePercentage;
+                    
                 }
                 else if (!Spotify.manualJukeboxPause && !Spotify.menuPause && !__instance._paused && uGUI_SceneLoadingPatcher.loadingDone && !__instance._audible && soundPositionNotOrigin) // If music is inaudible, set Spotify volume to 0.
                 {
