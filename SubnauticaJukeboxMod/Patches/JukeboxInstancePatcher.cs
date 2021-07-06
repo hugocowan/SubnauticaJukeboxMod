@@ -10,19 +10,27 @@ namespace JukeboxSpotify
     {
         [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.SetLabel))]
-        static void SetLabelPrefix(ref string text)
+        static bool SetLabelPrefix(ref string text)
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle) return;
-                new Log("Setting label to " + Spotify.currentTrackTitle, null);
+                if (!MainPatcher.Config.enableModToggle) return true;
+                if ("Unpowered" == text && !Spotify.justStarted)
+                {
+                    new Log("Jukebox powered down: " + text, null);
+                    Spotify.jukeboxUnpowered = true;
+                    return true;
+                }
                 text = Spotify.currentTrackTitle;
+
+                return true;
             }
             catch (Exception e)
             {
                 new Error("Something went wrong with setting the Jukebox label", e);
             }
 
+            return true;
         }
 
         [HarmonyPrefix]
@@ -203,13 +211,14 @@ namespace JukeboxSpotify
                 Spotify.manualSpotifyPause = false;
                 Spotify.playPauseTimeout = Time.time;
                 Spotify.stopCounter = 0;
+                Spotify.volumeTimer = 0;
+                Spotify.jukeboxVolume = __instance.volume;
+                Jukebox.volume = __instance.volume;
 
                 if (__instance != Spotify.currentInstance)
                 {
                     new Log("New JukeboxInstance does not match previous JukeboxInstance");
                     Spotify.currentInstance = __instance;
-                    Jukebox.volume = __instance.volume;
-                    Spotify.jukeboxVolume = __instance.volume;
                     Spotify.manualJukeboxPause = false;
                 }
                 else if (!Spotify.jukeboxIsPaused)

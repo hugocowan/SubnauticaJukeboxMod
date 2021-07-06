@@ -3,6 +3,7 @@ using QModManager.API;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -38,6 +39,7 @@ namespace JukeboxSpotify
         public static float jukeboxVolume = Jukebox.volume;
         public static bool resetJukebox = false;
         public static bool noTrack;
+        public static bool jukeboxUnpowered = false;
         public static JukeboxInstance currentInstance = null;
         public static int volumeModifier = 1;
         public static int stopCounter = 0;
@@ -163,8 +165,9 @@ namespace JukeboxSpotify
                 if (null == currentlyPlaying || null == currentlyPlaying.Item)
                 {
                     noTrack = true;
-                    new Error("Playback not found");
                     if (MainPatcher.Config.deviceId == null) await GetDevice();
+                    await client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { MainPatcher.Config.deviceId }));
+                    new Error("Playback not found");
                     currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
                     return;
                 }

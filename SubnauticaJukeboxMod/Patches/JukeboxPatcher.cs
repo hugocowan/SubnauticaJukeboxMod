@@ -92,6 +92,7 @@ namespace JukeboxSpotify
                 Jukebox.volume = 0;
                 Spotify.jukeboxIsPlaying = true;
                 Spotify.manualSpotifyPause = false;
+                Spotify.jukeboxUnpowered = false;
 
                 try
                 {
@@ -199,7 +200,11 @@ namespace JukeboxSpotify
                     if (null != __instance._instance)
                     {
                         Spotify.currentInstance = __instance._instance;
-                        if (__instance._instance.file != Spotify.currentTrackTitle) __instance._instance.file = Spotify.currentTrackTitle;
+                        if (__instance._instance.file != Spotify.currentTrackTitle)
+                        {
+                            new Log("setting JukeboxInstance file");
+                            __instance._instance.file = Spotify.currentTrackTitle;
+                        }
                     } 
                     else
                     { // If there's no jukebox playing, we update every jukebox instance's label and length.
@@ -226,7 +231,7 @@ namespace JukeboxSpotify
                 int volumePercentage = (int)(Spotify.jukeboxVolume * 100);
 
                 // This if/else block handles all distance-related volume and play/pause changes.
-                if (!Spotify.manualJukeboxPause && !Spotify.manualSpotifyPause && !Spotify.menuPause && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
+                if (!Spotify.jukeboxUnpowered && !Spotify.manualJukeboxPause && !Spotify.manualSpotifyPause && !Spotify.menuPause && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
                 {
                     volumePercentage = (int)((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100) + 1;
 
@@ -291,7 +296,7 @@ namespace JukeboxSpotify
                         Spotify.spotifyVolume = 0;
                     }
                 }
-                else if ((Spotify.manualSpotifyPause || __instance._paused || Spotify.menuPause) && !Spotify.jukeboxIsPaused)
+                else if ((Spotify.jukeboxUnpowered && !__instance._paused) || (Spotify.manualSpotifyPause || __instance._paused || Spotify.menuPause) && !Spotify.jukeboxIsPaused)
                 {
                     if (Spotify.manualSpotifyPause && null != __instance._instance)
                     {
@@ -307,19 +312,12 @@ namespace JukeboxSpotify
                     if (Spotify.spotifyIsPlaying) Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                     Spotify.spotifyIsPlaying = false;
                 }
-                else if (Spotify.manualSpotifyPlay || (!__instance._paused && !Spotify.menuPause) && Spotify.jukeboxIsPaused && Spotify.jukeboxIsPlaying)
+                else if (!Spotify.jukeboxUnpowered && (Spotify.manualSpotifyPlay || (!__instance._paused && !Spotify.menuPause)) && Spotify.jukeboxIsPaused && Spotify.jukeboxIsPlaying)
                 {
                     new Log("Resume track");
                     try
                     {
-                        if (null == __instance._instance)
-                        {
-                            new Log("No instance exists, creating instance");
-                            __instance._instance = new JukeboxInstance();
-                            Spotify.jukeboxNeedsPlaying = true;
-                            __instance._instance.UpdateUI();
-                        }
-                        else if (Spotify.manualSpotifyPlay)
+                        if (null != __instance._instance && Spotify.manualSpotifyPlay)
                         {
                             __instance._instance.OnButtonPlayPause();
                         }
