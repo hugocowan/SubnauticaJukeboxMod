@@ -153,7 +153,7 @@ namespace JukeboxSpotify
                 {
                     Spotify.stopCounter++;
                 }
-                Spotify.jukeboxIsPlaying = null;
+                Spotify.jukeboxIsPlaying = false;
                 Spotify.timeTrackStarted = Time.time;
                 Spotify.startingPosition = 0;
             }
@@ -171,7 +171,7 @@ namespace JukeboxSpotify
             try
             {
                 if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
-                if (true == Spotify.jukeboxIsPlaying || true == Spotify.jukeboxIsPaused)
+                if (Spotify.jukeboxIsPlaying || Spotify.jukeboxIsPaused)
                 {
                     long trackPosition = (long) (Spotify.currentTrackLength * __instance._position); // _position is a percentage
                     new Log("End drag occured");
@@ -200,6 +200,7 @@ namespace JukeboxSpotify
                     return false;
                 }
 
+                Spotify.manualSpotifyPause = false;
                 Spotify.playPauseTimeout = Time.time;
                 Spotify.stopCounter = 0;
 

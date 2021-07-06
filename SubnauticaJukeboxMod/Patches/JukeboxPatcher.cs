@@ -41,7 +41,7 @@ namespace JukeboxSpotify
                     Spotify.startingPosition = 1000;
                 }
 
-                if (true != Spotify.jukeboxIsPlaying)
+                if (!Spotify.jukeboxIsPlaying)
                 {
                     await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 }
@@ -62,7 +62,7 @@ namespace JukeboxSpotify
             try
             {
                 new Log("Application Quit");
-                Spotify.quitting = true;
+                uGUI_SceneLoadingPatcher.loadingDone = false;
                 if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
                 Spotify.trackDebouncer.Debounce(() => { }); // Clear the debouncer
                 Spotify.volumeThrottler.Throttle(() => { }); // Clear the throttler
@@ -70,7 +70,7 @@ namespace JukeboxSpotify
                 {
                     var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId };
                     if (Spotify.spotifyIsPlaying) Spotify.client.Player.PausePlayback(playbackRequest);
-                    Spotify.jukeboxIsPlaying = null;
+                    Spotify.jukeboxIsPlaying = false;
                 }
                 
                 Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100));
@@ -143,7 +143,7 @@ namespace JukeboxSpotify
                 if (MainPatcher.Config.enableModToggle && null != Spotify.client)
                 {
                     // Keep checking for track updates
-                    if (Time.time > (Spotify.getTrackTimer + 3))
+                    if (Time.time > (Spotify.getTrackTimer + 1))
                     {
                         Spotify.getTrackTimer = Time.time;
                         _ = Spotify.GetTrackInfo();
@@ -157,13 +157,13 @@ namespace JukeboxSpotify
                 }
 
                 // If the mod has been disabled, make sure the jukebox is reset.
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client)
+                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client || !uGUI_SceneLoadingPatcher.loadingDone)
                 {
                     if (Spotify.resetJukebox)
                     {
                         Spotify.resetJukebox = false;
 
-                        if (true == Spotify.jukeboxIsPlaying && !Spotify.spotifyIsPlaying)
+                        if (Spotify.jukeboxIsPlaying && !Spotify.spotifyIsPlaying)
                         {
                             Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                         }
@@ -202,7 +202,7 @@ namespace JukeboxSpotify
                         if (__instance._instance.file != Spotify.currentTrackTitle) __instance._instance.file = Spotify.currentTrackTitle;
                     } 
                     else
-                    {
+                    { // If there's no jukebox playing, we update every jukebox instance's label and length.
                         for (int i = 0; i < JukeboxInstance.all.Count; i++)
                         {
                             JukeboxInstance jukeboxInstance = JukeboxInstance.all[i];
@@ -214,8 +214,9 @@ namespace JukeboxSpotify
                     if (Spotify.justStarted && Spotify.playingOnStartup)
                     {
                         Spotify.jukeboxNeedsPlaying = true;
-                        Spotify.justStarted = false;
                     }
+
+                    Spotify.justStarted = false;
                 }
 
                 // Here we get the player position in relation to the nearest jukebox or speaker and adjust volume accordingly.
@@ -225,7 +226,7 @@ namespace JukeboxSpotify
                 int volumePercentage = (int)(Spotify.jukeboxVolume * 100);
 
                 // This if/else block handles all distance-related volume and play/pause changes.
-                if (!Spotify.manualJukeboxPause && !Spotify.menuPause && uGUI_SceneLoadingPatcher.loadingDone && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
+                if (!Spotify.manualJukeboxPause && !Spotify.manualSpotifyPause && !Spotify.menuPause && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
                 {
                     volumePercentage = (int)((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100) + 1;
 
@@ -272,7 +273,7 @@ namespace JukeboxSpotify
                     Spotify.spotifyVolume = volumePercentage;
                     
                 }
-                else if (!Spotify.manualJukeboxPause && !Spotify.menuPause && !__instance._paused && uGUI_SceneLoadingPatcher.loadingDone && !__instance._audible && soundPositionNotOrigin) // If music is inaudible, set Spotify volume to 0.
+                else if (!Spotify.manualJukeboxPause && !Spotify.manualSpotifyPause && !Spotify.menuPause && !__instance._paused && !__instance._audible && soundPositionNotOrigin) // If music is inaudible, set Spotify volume to 0.
                 {
                     // If PauseOnLeaveToggleValue is true, make sure we pause playback
                     if (MainPatcher.Config.pauseOnLeave && !Spotify.jukeboxIsPaused)
@@ -290,7 +291,7 @@ namespace JukeboxSpotify
                         Spotify.spotifyVolume = 0;
                     }
                 }
-                else if (uGUI_SceneLoadingPatcher.loadingDone && ((Spotify.manualSpotifyPause && !Spotify.manualJukeboxPlay) || __instance._paused || Spotify.menuPause) && false == Spotify.jukeboxIsPaused)
+                else if ((Spotify.manualSpotifyPause || __instance._paused || Spotify.menuPause) && !Spotify.jukeboxIsPaused)
                 {
                     if (Spotify.manualSpotifyPause && null != __instance._instance)
                     {
@@ -306,7 +307,7 @@ namespace JukeboxSpotify
                     if (Spotify.spotifyIsPlaying) Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                     Spotify.spotifyIsPlaying = false;
                 }
-                else if (uGUI_SceneLoadingPatcher.loadingDone && Spotify.manualSpotifyPlay || (!__instance._paused && !Spotify.menuPause) && true == Spotify.jukeboxIsPaused && true == Spotify.jukeboxIsPlaying)
+                else if (Spotify.manualSpotifyPlay || (!__instance._paused && !Spotify.menuPause) && Spotify.jukeboxIsPaused && Spotify.jukeboxIsPlaying)
                 {
                     new Log("Resume track");
                     try

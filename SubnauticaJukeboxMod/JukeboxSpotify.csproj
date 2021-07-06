@@ -115,7 +115,6 @@
     <Compile Include="Patches\MusicManagerPatcher.cs" />
     <Compile Include="Auth\Spotify.cs" />
     <Compile Include="Patches\JukeboxPatcher.cs" />
-    <Compile Include="Helpers\Retry.cs" />
     <Compile Include="Patches\uGUI_SceneLoadingPatcher.cs" />
     <Compile Include="Helpers\Error.cs" />
     <Compile Include="Patches\MainPatcher.cs" />
@@ -123,9 +122,6 @@
     <None Include="mod.json" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

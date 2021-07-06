@@ -19,7 +19,7 @@ namespace JukeboxSpotify
         public static SpotifyClient client;
         public static bool playingOnStartup = false;
         public static bool spotifyIsPlaying = false;
-        public static bool? jukeboxIsPlaying;
+        public static bool jukeboxIsPlaying;
         public static bool manualJukeboxPause = false;
         public static bool manualJukeboxPlay = false;
         public static bool manualSpotifyPlay = false;
@@ -38,7 +38,6 @@ namespace JukeboxSpotify
         public static float jukeboxVolume = Jukebox.volume;
         public static bool resetJukebox = false;
         public static bool noTrack;
-        public static bool quitting;
         public static JukeboxInstance currentInstance = null;
         public static int volumeModifier = 1;
         public static int stopCounter = 0;
@@ -219,7 +218,7 @@ namespace JukeboxSpotify
                     currentTrackTitle = currentTrack.Name;
                 }
 
-                if (uGUI_SceneLoadingPatcher.loadingDone && (playingOnStartup || !menuPause && true == jukeboxIsPlaying || oldTrackTitle != currentTrackTitle)) jukeboxNeedsUpdating = true;
+                if (uGUI_SceneLoadingPatcher.loadingDone && (playingOnStartup || !menuPause && jukeboxIsPlaying || oldTrackTitle != currentTrackTitle)) jukeboxNeedsUpdating = true;
             }
             catch (Exception e)
             {
