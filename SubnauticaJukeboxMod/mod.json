@@ -2,7 +2,7 @@
   "Id": "JukeboxSpotify",
   "DisplayName": "Jukebox Spotify Mod",
   "Author": "boogaliwoogali",
-  "Version": "1.4",
+  "Version": "1.5",
   "Requires": [ "SMLHelper" ],
   "Enable": true,
   "Game": "BelowZero",

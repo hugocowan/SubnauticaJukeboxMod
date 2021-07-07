@@ -10,7 +10,6 @@ namespace JukeboxSpotify
         public static void OnGamePausedPostfix()
         {
             if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
-            new Log("menuPause: true");
             Spotify.menuPause = true;
         }
 
@@ -19,7 +18,6 @@ namespace JukeboxSpotify
         public static void OnGameResumedPostfix()
         {
             if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
-            new Log("menuPause: false");
             Spotify.menuPause = false;
         }
 
