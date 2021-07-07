@@ -39,7 +39,6 @@ namespace JukeboxSpotify
         public static float jukeboxVolume = Jukebox.volume;
         public static bool resetJukebox = false;
         public static bool noTrack;
-        public static bool jukeboxUnpowered = false;
         public static JukeboxInstance currentInstance = null;
         public static int volumeModifier = 1;
         public static int stopCounter = 0;

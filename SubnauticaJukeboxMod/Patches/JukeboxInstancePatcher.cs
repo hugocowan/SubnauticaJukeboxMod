@@ -10,27 +10,17 @@ namespace JukeboxSpotify
     {
         [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.SetLabel))]
-        static bool SetLabelPrefix(ref string text)
+        static void SetLabelPrefix(ref string text)
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle) return true;
-                if ("Unpowered" == text && !Spotify.justStarted)
-                {
-                    new Log("Jukebox powered down: " + text, null);
-                    Spotify.jukeboxUnpowered = true;
-                    return true;
-                }
+                if (!MainPatcher.Config.enableModToggle || ("Unpowered" == text && !Spotify.justStarted)) return;
                 text = Spotify.currentTrackTitle;
-
-                return true;
             }
             catch (Exception e)
             {
                 new Error("Something went wrong with setting the Jukebox label", e);
             }
-
-            return true;
         }
 
         [HarmonyPrefix]
@@ -76,6 +66,12 @@ namespace JukeboxSpotify
             try
             {
                 if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+
+                if (!__instance.ConsumePower())
+                {
+                    __instance.SetLabel("Unpowered");
+                    return;
+                }
                 int volumePercentage = (int) (__instance.volume * 100);
 
                 Spotify.spotifyVolume = volumePercentage;
@@ -139,23 +135,56 @@ namespace JukeboxSpotify
             }
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(JukeboxInstance.OnButtonPrevious))]
+        public static bool OnButtonPreviousPrefix(ref JukeboxInstance __instance)
+        {
+            if (!__instance.ConsumePower())
+            {
+                __instance.SetLabel("Unpowered");
+                return false;
+            }
+
+            return true;
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(JukeboxInstance.OnButtonNext))]
+        public static bool OnButtonNextPrefix(ref JukeboxInstance __instance)
+        {
+            if (!__instance.ConsumePower())
+            {
+                __instance.SetLabel("Unpowered");
+                return false;
+            }
+
+            return true;
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonStop))]
-        public async static void OnButtonStopPostfix()
+        public static void OnButtonStopPostfix(ref JukeboxInstance __instance)
         {
             try
             {
                 if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+
+                if (!__instance.ConsumePower())
+                {
+                    __instance.SetLabel("Unpowered");
+                    return;
+                }
+
                 new Log("Stop track");
                 Spotify.jukeboxIsPaused = false;
                 Spotify.manualJukeboxPause = true;
-                if (Spotify.spotifyIsPlaying) await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
+                if (Spotify.spotifyIsPlaying) Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.spotifyIsPlaying = false;
                 Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100)));
                 if (Spotify.stopCounter >= 1 || !MainPatcher.Config.stopTwiceForStart)
                 {
                     Spotify.stopCounter = 0;
-                    await Spotify.client.Player.SeekTo(new PlayerSeekToRequest(0));
+                    Spotify.client.Player.SeekTo(new PlayerSeekToRequest(0));
                 }
                 else
                 {
@@ -169,7 +198,6 @@ namespace JukeboxSpotify
             {
                 new Error("Something went wrong with stopping the track", e);
             }
-
         }
 
         [HarmonyPostfix]
@@ -179,6 +207,13 @@ namespace JukeboxSpotify
             try
             {
                 if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+
+                if (!__instance.ConsumePower())
+                {
+                    __instance.SetLabel("Unpowered");
+                    return;
+                }
+
                 if (Spotify.jukeboxIsPlaying || Spotify.jukeboxIsPaused)
                 {
                     long trackPosition = (long) (Spotify.currentTrackLength * __instance._position); // _position is a percentage
@@ -205,6 +240,13 @@ namespace JukeboxSpotify
                 if (Spotify.playPauseTimeout + 0.5 > Time.time)
                 {
                     new Log("very fast consecutive call to method");
+                    return false;
+                }
+
+                // Don't do anything if the power is out
+                if (!__instance.ConsumePower())
+                {
+                    __instance.SetLabel("Unpowered");
                     return false;
                 }
 

@@ -92,7 +92,6 @@ namespace JukeboxSpotify
                 Jukebox.volume = 0;
                 Spotify.jukeboxIsPlaying = true;
                 Spotify.manualSpotifyPause = false;
-                Spotify.jukeboxUnpowered = false;
 
                 try
                 {
@@ -202,7 +201,6 @@ namespace JukeboxSpotify
                         Spotify.currentInstance = __instance._instance;
                         if (__instance._instance.file != Spotify.currentTrackTitle)
                         {
-                            new Log("setting JukeboxInstance file");
                             __instance._instance.file = Spotify.currentTrackTitle;
                         }
                     } 
@@ -224,14 +222,18 @@ namespace JukeboxSpotify
                     Spotify.justStarted = false;
                 }
 
+                // If we don't have a jukebox instance, there is nothing to be done.
+                if (null == __instance._instance) return;
+
                 // Here we get the player position in relation to the nearest jukebox or speaker and adjust volume accordingly.
                 Vector3 position2 = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
                 float sqrMagnitude = (__instance.soundPosition - position2).sqrMagnitude;
                 bool soundPositionNotOrigin = __instance.soundPosition.x != 0 && __instance.soundPosition.y != 0 && __instance.soundPosition.z != 0;
                 int volumePercentage = (int)(Spotify.jukeboxVolume * 100);
+                bool isPowered = __instance._instance.ConsumePower();
 
                 // This if/else block handles all distance-related volume and play/pause changes.
-                if (!Spotify.jukeboxUnpowered && !Spotify.manualJukeboxPause && !Spotify.manualSpotifyPause && !Spotify.menuPause && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
+                if (isPowered && !Spotify.manualJukeboxPause && !Spotify.manualSpotifyPause && !Spotify.menuPause && __instance._audible && sqrMagnitude <= 400 && soundPositionNotOrigin)
                 {
                     volumePercentage = (int)((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100) + 1;
 
@@ -247,7 +249,7 @@ namespace JukeboxSpotify
                     }
 
                     // Check whether the jukebox is in a SeaTruck.
-                    bool seaTruckJukeboxPlaying = null != __instance._instance && null != __instance._instance.GetComponentInParent<SeaTruckSegment>();
+                    bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>();
 
                     // If the player is underwater, or if the seatruck jukebox is playing but the player is not in the seatruck, or if a base's jukebox is playing but they aren't in the base,
                     // halve the music volume as there is a body of water between the jukebox and the player.
@@ -296,9 +298,9 @@ namespace JukeboxSpotify
                         Spotify.spotifyVolume = 0;
                     }
                 }
-                else if ((Spotify.jukeboxUnpowered && !__instance._paused) || (Spotify.manualSpotifyPause || __instance._paused || Spotify.menuPause) && !Spotify.jukeboxIsPaused)
+                else if ((!isPowered && !__instance._paused) || (Spotify.manualSpotifyPause || __instance._paused || Spotify.menuPause) && !Spotify.jukeboxIsPaused)
                 {
-                    if (Spotify.manualSpotifyPause && null != __instance._instance)
+                    if (Spotify.manualSpotifyPause)
                     {
                         __instance._instance.OnButtonPlayPause();
                     }
@@ -312,12 +314,12 @@ namespace JukeboxSpotify
                     if (Spotify.spotifyIsPlaying) Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                     Spotify.spotifyIsPlaying = false;
                 }
-                else if (!Spotify.jukeboxUnpowered && (Spotify.manualSpotifyPlay || (!__instance._paused && !Spotify.menuPause)) && Spotify.jukeboxIsPaused && Spotify.jukeboxIsPlaying)
+                else if (isPowered && (Spotify.manualSpotifyPlay || (!__instance._paused && !Spotify.menuPause)) && Spotify.jukeboxIsPaused && Spotify.jukeboxIsPlaying)
                 {
                     new Log("Resume track");
                     try
                     {
-                        if (null != __instance._instance && Spotify.manualSpotifyPlay)
+                        if (Spotify.manualSpotifyPlay)
                         {
                             __instance._instance.OnButtonPlayPause();
                         }
