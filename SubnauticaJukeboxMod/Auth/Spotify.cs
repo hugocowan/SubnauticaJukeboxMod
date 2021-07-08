@@ -60,6 +60,8 @@ namespace JukeboxSpotify
                     return;
                 }
 
+                justStarted = true;
+
                 // Check the config for a stored refresh token
                 if (null != MainPatcher.Config.refreshToken)
                 {
@@ -84,14 +86,11 @@ namespace JukeboxSpotify
                     await Task.Delay(1000);
                 }
 
-                justStarted = true;
-
                 await GetDevice();
 
                 await GetTrackInfo();
 
                 new Log("Spotify successfully loaded");
-
             }
             catch (Exception e)
             {

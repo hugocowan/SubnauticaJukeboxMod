@@ -185,7 +185,11 @@ namespace JukeboxSpotify
                     Spotify.timeTrackStarted = Time.time - Spotify.startingPosition / 1000;
                     float currentPosition = (Time.time - Spotify.timeTrackStarted);
 
-                    if (Math.Abs((Jukebox.position / 1000) - currentPosition) > 1) Jukebox.position = (uint)currentPosition * 1000;
+                    if (Math.Abs((Jukebox.position / 1000) - currentPosition) > 1)
+                    {
+                        new Log("Setting position. Jukebox.position: " + Jukebox.position);
+                        Jukebox.position = (uint)currentPosition * 1000;
+                    }
 
                     // This updates the track label in the JukeboxInstance object. It's the only place it needs changing
                     if (null != __instance._instance)
