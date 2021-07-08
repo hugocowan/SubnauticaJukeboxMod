@@ -12,7 +12,6 @@ namespace JukeboxSpotify
     class Spotify
     {
         private static EmbedIOAuthServer _server;
-        public static DebounceDispatcher trackDebouncer = new DebounceDispatcher(1000);
         public static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(333);
         public static bool repeatTrack = false;
         public static bool justStarted;
@@ -22,7 +21,6 @@ namespace JukeboxSpotify
         public static bool spotifyIsPlaying = false;
         public static bool jukeboxIsPlaying;
         public static bool manualJukeboxPause = false;
-        public static bool manualJukeboxPlay = false;
         public static bool manualSpotifyPlay = false;
         public static bool manualSpotifyPause = false;
         public static bool jukeboxIsPaused = false;
@@ -34,7 +32,6 @@ namespace JukeboxSpotify
         public static uint currentTrackLength = 0;
         public static float timeTrackStarted = 0;
         public static float playPauseTimeout = 0;
-        public static uint timelinePosition = 0;
         public static int spotifyVolume = 100;
         public static float jukeboxVolume = Jukebox.volume;
         public static bool resetJukebox = false;

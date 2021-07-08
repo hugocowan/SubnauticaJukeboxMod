@@ -64,7 +64,6 @@ namespace JukeboxSpotify
                 new Log("Application Quit");
                 uGUI_SceneLoadingPatcher.loadingDone = false;
                 if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
-                Spotify.trackDebouncer.Debounce(() => { }); // Clear the debouncer
                 Spotify.volumeThrottler.Throttle(() => { }); // Clear the throttler
                 if (!Spotify.playingOnStartup)
                 {
@@ -93,14 +92,7 @@ namespace JukeboxSpotify
                 Spotify.jukeboxIsPlaying = true;
                 Spotify.manualSpotifyPause = false;
 
-                try
-                {
-                    await Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume));
-                }
-                catch (Exception e)
-                {
-                    new Error("Setting Spotify volume failed", e);
-                }
+                await Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume));
 
                 try
                 {

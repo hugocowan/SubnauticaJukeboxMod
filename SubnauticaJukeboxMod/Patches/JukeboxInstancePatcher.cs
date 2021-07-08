@@ -10,11 +10,11 @@ namespace JukeboxSpotify
     {
         [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.SetLabel))]
-        static void SetLabelPrefix(ref string text)
+        static void SetLabelPrefix(ref JukeboxInstance __instance, ref string text)
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || ("Unpowered" == text && !Spotify.justStarted)) return;
+                if (!MainPatcher.Config.enableModToggle || (!__instance.ConsumePower() && !Spotify.justStarted)) return;
                 text = Spotify.currentTrackTitle;
             }
             catch (Exception e)
@@ -36,7 +36,7 @@ namespace JukeboxSpotify
             {
                 new Error("Something went wrong with stopping the track", e);
             }
-
+                                       
         }
 
         [HarmonyPrefix]
@@ -65,13 +65,8 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
 
-                if (!__instance.ConsumePower())
-                {
-                    __instance.SetLabel("Unpowered");
-                    return;
-                }
                 int volumePercentage = (int) (__instance.volume * 100);
 
                 Spotify.spotifyVolume = volumePercentage;
@@ -85,28 +80,32 @@ namespace JukeboxSpotify
             }
         }
 
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonShuffle))]
-        public static void OnButtonShufflePostFix(JukeboxInstance __instance)
+        public static bool OnButtonShufflePrefix(JukeboxInstance __instance)
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return true;
+                if (!IsPowered(__instance)) return false;
                 Spotify.client.Player.SetShuffle(new PlayerShuffleRequest(__instance.shuffle));
             }
             catch (Exception e)
             {
                 new Error("Something went wrong while setting shuffle", e);
             }
+
+            return true;
         }        
         
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonRepeat))]
-        public static void OnButtonRepeatPostFix(JukeboxInstance __instance)
+        public static bool OnButtonRepeatPrefix(JukeboxInstance __instance)
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return true;
+                if (!IsPowered(__instance)) return false;
                 new Log("Repeat button pressed");
 
                 PlayerSetRepeatRequest.State state;
@@ -133,18 +132,15 @@ namespace JukeboxSpotify
             {
                 new Error("Something went wrong when setting the repeat state", e);
             }
+
+            return true;
         }
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonPrevious))]
         public static bool OnButtonPreviousPrefix(ref JukeboxInstance __instance)
         {
-            if (!__instance.ConsumePower())
-            {
-                __instance.SetLabel("Unpowered");
-                return false;
-            }
-
+            if (!IsPowered(__instance)) return false;
             return true;
         }
 
@@ -152,12 +148,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonNext))]
         public static bool OnButtonNextPrefix(ref JukeboxInstance __instance)
         {
-            if (!__instance.ConsumePower())
-            {
-                __instance.SetLabel("Unpowered");
-                return false;
-            }
-
+            if (!IsPowered(__instance)) return false;
             return true;
         }
 
@@ -167,13 +158,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
-
-                if (!__instance.ConsumePower())
-                {
-                    __instance.SetLabel("Unpowered");
-                    return;
-                }
+                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
 
                 new Log("Stop track");
                 Spotify.jukeboxIsPaused = false;
@@ -202,17 +187,11 @@ namespace JukeboxSpotify
 
         [HarmonyPostfix]
         [HarmonyPatch(nameof(JukeboxInstance.OnPositionEndDrag))]
-        public static void OnPositionEndDragPostFix(JukeboxInstance __instance)
+        public static void OnPositionEndDragPostfix(JukeboxInstance __instance)
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
-
-                if (!__instance.ConsumePower())
-                {
-                    __instance.SetLabel("Unpowered");
-                    return;
-                }
+                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
 
                 if (Spotify.jukeboxIsPlaying || Spotify.jukeboxIsPaused)
                 {
@@ -230,7 +209,7 @@ namespace JukeboxSpotify
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonPlayPause))]
-        public static bool OnButtonPlayPausePreFix(JukeboxInstance __instance)
+        public static bool OnButtonPlayPausePrefix(JukeboxInstance __instance)
         {
             try
             {
@@ -243,12 +222,7 @@ namespace JukeboxSpotify
                     return false;
                 }
 
-                // Don't do anything if the power is out
-                if (!__instance.ConsumePower())
-                {
-                    __instance.SetLabel("Unpowered");
-                    return false;
-                }
+                if (!IsPowered(__instance)) return false;
 
                 Spotify.manualSpotifyPause = false;
                 Spotify.playPauseTimeout = Time.time;
@@ -275,7 +249,7 @@ namespace JukeboxSpotify
                 // This is needed for the first time we press play.
                 if (!Jukebox.HasFile(__instance._file))
                 {
-                    new Log("Jukebox doesn't have our track D:");
+                    new Log("Jukebox doesn't have our track");
                     Jukebox.Play(__instance);
                     return false;
                 }
@@ -285,6 +259,18 @@ namespace JukeboxSpotify
             catch (Exception e)
             {
                 new Error("Something went wrong with stopping the track", e);
+            }
+
+            return true;
+        }
+
+        private static bool IsPowered(JukeboxInstance __instance)
+        {
+
+            if (!__instance.ConsumePower())
+            {
+                __instance.SetLabel("Unpowered");
+                return false;
             }
 
             return true;
