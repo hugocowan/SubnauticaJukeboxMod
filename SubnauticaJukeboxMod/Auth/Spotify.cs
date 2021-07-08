@@ -35,6 +35,7 @@ namespace JukeboxSpotify
         public static int spotifyVolume = 100;
         public static float jukeboxVolume = Jukebox.volume;
         public static bool resetJukebox = false;
+        public static bool spotifyShuffleState = false;
         public static bool noTrack;
         public static JukeboxInstance currentInstance = null;
         public static int volumeModifier = 1;
@@ -183,6 +184,7 @@ namespace JukeboxSpotify
                     //    Jukebox.main._instance.OnButtonRepeat();
                     //    await Task.Delay(500);
                     //}
+                    spotifyShuffleState = currentlyPlaying.ShuffleState;
                     if (Jukebox.shuffle != currentlyPlaying.ShuffleState) Jukebox.main._instance.OnButtonShuffle();
                 }
 
@@ -319,7 +321,7 @@ namespace JukeboxSpotify
                 );
 
                 client = new SpotifyClient(newResponse.AccessToken);
-                new Log("Refreshed the Spotify session.");
+                if (!justStarted) new Log("Refreshed the Spotify session.");
                 refreshSessionExpiryTime = newResponse.ExpiresIn;
                 refreshSessionTimer = Time.time;
             }

@@ -88,7 +88,7 @@ namespace JukeboxSpotify
             {
                 if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return true;
                 if (!IsPowered(__instance)) return false;
-                Spotify.client.Player.SetShuffle(new PlayerShuffleRequest(__instance.shuffle));
+                if (__instance.shuffle == Spotify.spotifyShuffleState) Spotify.client.Player.SetShuffle(new PlayerShuffleRequest(!__instance.shuffle));
             }
             catch (Exception e)
             {
