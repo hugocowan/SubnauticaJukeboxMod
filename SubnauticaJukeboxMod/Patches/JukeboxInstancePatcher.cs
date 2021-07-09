@@ -244,7 +244,6 @@ namespace JukeboxSpotify
                 // This is to stop the method getting called very quickly after the first one.
                 if (Spotify.playPauseTimeout + 0.5 > Time.time)
                 {
-                    new Log("very fast consecutive call to method");
                     return false;
                 }
 

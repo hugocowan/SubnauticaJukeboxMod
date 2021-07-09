@@ -197,7 +197,7 @@ namespace JukeboxSpotify
                     __instance._position = (uint)Spotify.currentPosition * 1000;
                 }
 
-                
+                //new Log("JukeboxInstance is null: " + (null == __instance._instance) + " | manual play: " + Spotify.manualSpotifyPlay + " | jukeboxIsPlaying: " + Spotify.jukeboxIsPlaying);
 
                 // If we don't have a jukebox instance, there is nothing to be done.
                 if (null == __instance._instance) return;
@@ -314,8 +314,9 @@ namespace JukeboxSpotify
                 }
             }
 
-            if (Spotify.justStarted && Spotify.playingOnStartup)
+            if ((Spotify.justStarted && Spotify.playingOnStartup) || (Spotify.manualSpotifyPlay && !Spotify.jukeboxIsPlaying))
             {
+                Spotify.manualJukeboxPause = false;
                 Spotify.jukeboxNeedsPlaying = true;
             }
 
@@ -333,6 +334,7 @@ namespace JukeboxSpotify
                 __instance._paused = true;
             }
             Spotify.jukeboxIsPaused = true;
+            Spotify.manualSpotifyPlay = false;
             Spotify.manualSpotifyPause = false;
             if (Spotify.spotifyIsPlaying) Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
             Spotify.spotifyIsPlaying = false;
@@ -351,6 +353,7 @@ namespace JukeboxSpotify
             Spotify.jukeboxIsPaused = false;
             Spotify.jukeboxIsPlaying = true;
             Spotify.manualSpotifyPlay = false;
+            Spotify.manualSpotifyPause = false;
             if (!Spotify.spotifyIsPlaying) Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
             Spotify.spotifyIsPlaying = true;
         }

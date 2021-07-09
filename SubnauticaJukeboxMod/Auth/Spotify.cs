@@ -198,11 +198,11 @@ namespace JukeboxSpotify
                 currentTrackLength = (uint)currentTrack.DurationMs;
                 noTrack = false;
 
-                if (spotifyIsPlaying && jukeboxIsPaused && !justStarted)
+                if (spotifyIsPlaying && (jukeboxIsPaused || !jukeboxIsPlaying))
                 {
                     manualSpotifyPlay = true;
                 }
-                else if (!spotifyIsPlaying && !jukeboxIsPaused && !justStarted)
+                else if (!spotifyIsPlaying && !jukeboxIsPaused)
                 {
                     manualSpotifyPause = true;
                 }
@@ -221,7 +221,12 @@ namespace JukeboxSpotify
                     currentTrackTitle = currentTrack.Name;
                 }
 
-                if (uGUI_SceneLoadingPatcher.loadingDone && (playingOnStartup || !menuPause && jukeboxIsPlaying || oldTrackTitle != currentTrackTitle)) jukeboxNeedsUpdating = true;
+                // Update the jukebox if we're in the game and
+                // Spotify is playing on startup or
+                // The jukebox is playing and we aren't in a menu or
+                // The track title is wrong or
+                // Spotify has been played via the external player and the jukebox is either stopped or paused.
+                if (uGUI_SceneLoadingPatcher.loadingDone && (playingOnStartup || (!menuPause && jukeboxIsPlaying) || oldTrackTitle != currentTrackTitle || (manualSpotifyPlay && (jukeboxIsPaused || !jukeboxIsPlaying)))) jukeboxNeedsUpdating = true;
             }
             catch (Exception e)
             {
