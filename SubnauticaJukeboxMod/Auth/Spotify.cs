@@ -37,6 +37,8 @@ namespace JukeboxSpotify
         public static bool resetJukebox = false;
         public static bool spotifyShuffleState = false;
         public static bool noTrack;
+        public static bool beyondFiveMins;
+        public static bool positionDrag;
         public static JukeboxInstance currentInstance = null;
         public static int volumeModifier = 1;
         public static int stopCounter = 0;
@@ -44,6 +46,7 @@ namespace JukeboxSpotify
         public static float refreshSessionTimer = 0;
         public static float refreshSessionExpiryTime = 3600;
         public static float volumeTimer = 0;
+        public static float currentPosition = 0;
 
         public async static Task SpotifyLogin()
         {

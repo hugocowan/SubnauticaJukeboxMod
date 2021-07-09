@@ -10,17 +10,20 @@ namespace JukeboxSpotify
     {
         [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.SetLabel))]
-        static void SetLabelPrefix(ref JukeboxInstance __instance, ref string text)
+        static bool SetLabelPrefix(ref JukeboxInstance __instance, ref string text)
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || (!__instance.ConsumePower() && !Spotify.justStarted)) return;
+                if (!MainPatcher.Config.enableModToggle || (!__instance.ConsumePower() && !Spotify.justStarted)) return true;
+                if (Spotify.beyondFiveMins) return false;
                 text = Spotify.currentTrackTitle;
             }
             catch (Exception e)
             {
                 new Error("Something went wrong with setting the Jukebox label", e);
             }
+
+            return true;
         }
 
         [HarmonyPrefix]
@@ -77,6 +80,19 @@ namespace JukeboxSpotify
             catch (Exception e)
             {
                 new Error("Something went wrong while changing the volume", e);
+            }
+        }
+
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(JukeboxInstance.UpdatePositionSlider))]
+        public static void UpdatePositionSliderPrefix(JukeboxInstance __instance)
+        {
+            float trackPosition = (Spotify.currentPosition * 1000) / (float)Spotify.currentTrackLength; // _position is a percentage
+
+            if (Spotify.beyondFiveMins && !Spotify.positionDrag)
+            {
+                __instance._position = trackPosition;
+                //Jukebox.main._position = (uint)Spotify.currentPosition * 1000;
             }
         }
 
@@ -185,6 +201,13 @@ namespace JukeboxSpotify
             }
         }
 
+        [HarmonyPrefix]
+        [HarmonyPatch(nameof(JukeboxInstance.OnPositionBeginDrag))]
+        public static void OnPositionBeginDragPrefix()
+        {
+            Spotify.positionDrag = true;
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(nameof(JukeboxInstance.OnPositionEndDrag))]
         public static void OnPositionEndDragPostfix(JukeboxInstance __instance)
@@ -196,6 +219,7 @@ namespace JukeboxSpotify
                 if (Spotify.jukeboxIsPlaying || Spotify.jukeboxIsPaused)
                 {
                     long trackPosition = (long) (Spotify.currentTrackLength * __instance._position); // _position is a percentage
+                    Spotify.beyondFiveMins = (trackPosition / 1000) >= 300;
                     new Log("End drag occured");
                     Spotify.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = MainPatcher.Config.deviceId });
                     Spotify.timeTrackStarted = Time.time - trackPosition / 1000;
@@ -205,6 +229,8 @@ namespace JukeboxSpotify
             {
                 new Error("Something went wrong with stopping the track", e);
             }
+
+            Spotify.positionDrag = false;
         }
 
         [HarmonyPrefix]
