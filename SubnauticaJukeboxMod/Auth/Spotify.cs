@@ -46,6 +46,7 @@ namespace JukeboxSpotify
         public static float refreshSessionTimer = 0;
         public static float refreshSessionExpiryTime = 3600;
         public static float volumeTimer = 0;
+        public static float jukeboxActionTimer = 0;
         public static float currentPosition = 0;
 
         public async static Task SpotifyLogin()
@@ -198,11 +199,13 @@ namespace JukeboxSpotify
                 currentTrackLength = (uint)currentTrack.DurationMs;
                 noTrack = false;
 
-                if (spotifyIsPlaying && (jukeboxIsPaused || !jukeboxIsPlaying))
+                // Make sure no jukebox actions have taken place in the last second before setting any kind of manual spotify state.
+                // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
+                if ((Time.time > jukeboxActionTimer + 1) && spotifyIsPlaying && (jukeboxIsPaused || !jukeboxIsPlaying))
                 {
                     manualSpotifyPlay = true;
                 }
-                else if (!spotifyIsPlaying && !jukeboxIsPaused)
+                else if ((Time.time > jukeboxActionTimer + 1) && !justStarted && !spotifyIsPlaying && (!jukeboxIsPaused && jukeboxIsPlaying))
                 {
                     manualSpotifyPause = true;
                 }

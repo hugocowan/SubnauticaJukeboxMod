@@ -80,23 +80,25 @@ namespace JukeboxSpotify
             }
         }
 
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         [HarmonyPatch(nameof(Jukebox.Play))]
-        public async static void PlayPostfix()
+        public static void PlayPrefix(Jukebox __instance)
         {
             try
             {
                 if (!MainPatcher.Config.enableModToggle || null == Spotify.client) return;
+
                 new Log("Play track");
                 Jukebox.volume = 0;
                 Spotify.jukeboxIsPlaying = true;
                 Spotify.manualSpotifyPause = false;
-
-                await Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume));
+                Spotify.manualJukeboxPause = false;
+                Spotify.stopCounter = 0;
+                Spotify.volumeTimer = 0;
 
                 try
                 {
-                    if (!Spotify.spotifyIsPlaying) await Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
+                    if (!Spotify.spotifyIsPlaying) Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                     Spotify.spotifyIsPlaying = true;
                 }
                 catch (Exception e)
@@ -108,6 +110,8 @@ namespace JukeboxSpotify
             {
                 new Error("Something went wrong with playing the track", e);
             }
+
+            return;
         }
 
         [HarmonyPostfix]
@@ -126,24 +130,6 @@ namespace JukeboxSpotify
             __instance._file = "event:/jukebox/jukebox_takethedive"; // This avoids errors and generally makes the jukebox very, Very happy.
         }
 
-        //[HarmonyPrefix]
-        //[HarmonyPatch(nameof(Jukebox.UpdateStudio))]
-        //public static bool UpdateStudioPrefix(Jukebox __instance)
-        //{
-        //    if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return true;
-        //    if (!__instance._eventInstanceChannelGroup.hasHandle())
-        //    {
-        //        __instance._eventInstance.getChannelGroup(out __instance._eventInstanceChannelGroup);
-        //        new Log("no handle D: " + __instance._eventInstanceChannelGroup.hasHandle());
-        //        if (__instance._eventInstanceChannelGroup.hasHandle())
-        //        {
-        //            return false;
-        //        }
-        //    }
-
-        //    return true;
-        //}
-
         [HarmonyPostfix]
         [HarmonyPatch(nameof(Jukebox.UpdateStudio))]
         public static void UpdateStudioPostfix(Jukebox __instance)
@@ -152,38 +138,13 @@ namespace JukeboxSpotify
             {
                 if (MainPatcher.Config.enableModToggle && null != Spotify.client)
                 {
-                    // Keep checking for track updates
-                    if (Time.time > (Spotify.getTrackTimer + 1))
-                    {
-                        Spotify.getTrackTimer = Time.time;
-                        _ = Spotify.GetTrackInfo();
-                    }
-
-                    // Keep the Spotify access token up to date
-                    if (Spotify.refreshSessionTimer != 0 && Time.time > (Spotify.refreshSessionTimer + Spotify.refreshSessionExpiryTime - 2)) _ = Spotify.RefreshSession();
+                    KeepAlive();
                 }
 
-                // If the mod has been disabled, make sure the jukebox is reset.
                 if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client || !uGUI_SceneLoadingPatcher.loadingDone)
                 {
-                    if (Spotify.resetJukebox)
-                    {
-                        Spotify.resetJukebox = false;
-
-                        if (Spotify.jukeboxIsPlaying && !Spotify.spotifyIsPlaying)
-                        {
-                            Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
-                        }
-
-                        if (__instance._instance)
-                        {
-                            __instance._instance.file = "event:/jukebox/jukebox_takethedive";
-                            Jukebox.position = 0;
-                            Jukebox.GetNext(__instance._instance, true);
-                            Jukebox.Stop();
-                        }
-                    }
-
+                    // If the mod has been disabled, make sure the jukebox is reset.
+                    if (Spotify.resetJukebox) ResetJukebox(__instance);
                     return;
                 }
 
@@ -197,11 +158,8 @@ namespace JukeboxSpotify
                     __instance._position = (uint)Spotify.currentPosition * 1000;
                 }
 
-                //new Log("JukeboxInstance is null: " + (null == __instance._instance) + " | manual play: " + Spotify.manualSpotifyPlay + " | jukeboxIsPlaying: " + Spotify.jukeboxIsPlaying);
-
-                // If we don't have a jukebox instance, there is nothing to be done.
+                // If we don't have a jukebox instance, there is nothing more to be done.
                 if (null == __instance._instance) return;
-
 
                 // Here we get the player position in relation to the nearest jukebox or speaker and adjust volume accordingly.
                 Vector3 position2 = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
@@ -265,7 +223,7 @@ namespace JukeboxSpotify
                         Spotify.spotifyVolume = 0;
                     }
                 }
-                else if ((!isPowered && !__instance._paused) || (Spotify.manualSpotifyPause || __instance._paused || Spotify.menuPause) && !Spotify.jukeboxIsPaused)
+                else if ((!isPowered && !__instance._paused) || ((Spotify.manualSpotifyPause || __instance._paused || Spotify.menuPause) && !Spotify.jukeboxIsPaused))
                 {
                     new Log("Pause track");
                     Pause(__instance);
@@ -325,7 +283,7 @@ namespace JukeboxSpotify
 
         private static void Pause(Jukebox __instance)
         {
-            if (Spotify.manualSpotifyPause)
+            if (Spotify.manualSpotifyPause && __instance._instance.canvas.enabled)
             {
                 __instance._instance.OnButtonPlayPause();
             }
@@ -342,7 +300,7 @@ namespace JukeboxSpotify
 
         private static void Resume(Jukebox __instance)
         {
-            if (Spotify.manualSpotifyPlay)
+            if (Spotify.manualSpotifyPlay && __instance._instance.canvas.enabled)
             {
                 __instance._instance.OnButtonPlayPause();
             }
@@ -356,6 +314,37 @@ namespace JukeboxSpotify
             Spotify.manualSpotifyPause = false;
             if (!Spotify.spotifyIsPlaying) Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
             Spotify.spotifyIsPlaying = true;
+        }
+
+        private static void KeepAlive()
+        {
+            // Keep checking for track updates
+            if (Time.time > (Spotify.getTrackTimer + 1))
+            {
+                Spotify.getTrackTimer = Time.time;
+                _ = Spotify.GetTrackInfo();
+            }
+
+            // Keep the Spotify access token up to date
+            if (Spotify.refreshSessionTimer != 0 && Time.time > (Spotify.refreshSessionTimer + Spotify.refreshSessionExpiryTime - 2)) _ = Spotify.RefreshSession();
+        }
+
+        private static void ResetJukebox(Jukebox __instance)
+        {
+            Spotify.resetJukebox = false;
+
+            if (Spotify.jukeboxIsPlaying && !Spotify.spotifyIsPlaying)
+            {
+                Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
+            }
+
+            if (__instance._instance)
+            {
+                __instance._instance.file = "event:/jukebox/jukebox_takethedive";
+                Jukebox.position = 0;
+                Jukebox.GetNext(__instance._instance, true);
+                Jukebox.Stop();
+            }
         }
     }
 }
