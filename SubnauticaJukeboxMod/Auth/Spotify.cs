@@ -201,11 +201,11 @@ namespace JukeboxSpotify
 
                 // Make sure no jukebox actions have taken place in the last second before setting any kind of manual spotify state.
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
-                if ((Time.time > jukeboxActionTimer + 1) && spotifyIsPlaying && (jukeboxIsPaused || !jukeboxIsPlaying))
+                if ((Time.time > jukeboxActionTimer + 1) && !menuPause && spotifyIsPlaying && (jukeboxIsPaused || !jukeboxIsPlaying))
                 {
                     manualSpotifyPlay = true;
                 }
-                else if ((Time.time > jukeboxActionTimer + 1) && !justStarted && !spotifyIsPlaying && (!jukeboxIsPaused && jukeboxIsPlaying))
+                else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !spotifyIsPlaying && (!jukeboxIsPaused && jukeboxIsPlaying))
                 {
                     manualSpotifyPause = true;
                 }

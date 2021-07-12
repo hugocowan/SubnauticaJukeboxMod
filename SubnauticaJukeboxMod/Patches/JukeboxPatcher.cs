@@ -175,7 +175,7 @@ namespace JukeboxSpotify
                     // If PauseOnLeaveToggleValue is true, make sure we resume playback
                     if (MainPatcher.Config.pauseOnLeave && Spotify.jukeboxIsPaused)
                     {
-                        new Log("Resuming track - distance");
+                        new Log("Resume track - distance");
                         Resume(__instance);
                     }
 
@@ -213,8 +213,8 @@ namespace JukeboxSpotify
                     // If PauseOnLeaveToggleValue is true, make sure we pause playback
                     if (MainPatcher.Config.pauseOnLeave && !Spotify.jukeboxIsPaused)
                     {
-                        new Log("pausing track - distance.");
-                        Pause(__instance);
+                        new Log("Pause track - distance.");
+                        Pause(__instance, isPowered);
                     }
 
                     if (Spotify.spotifyVolume != 0)
@@ -226,13 +226,20 @@ namespace JukeboxSpotify
                 else if ((!isPowered && !__instance._paused) || ((Spotify.manualSpotifyPause || __instance._paused || Spotify.menuPause) && !Spotify.jukeboxIsPaused))
                 {
                     new Log("Pause track");
-                    Pause(__instance);
+                    Pause(__instance, isPowered);
                 }
                 else if (isPowered && (Spotify.manualSpotifyPlay || (!__instance._paused && !Spotify.menuPause)) && Spotify.jukeboxIsPaused && Spotify.jukeboxIsPlaying)
                 {
                     new Log("Resume track");
                     Resume(__instance);
                 }
+
+                if (!isPowered && Spotify.spotifyIsPlaying)
+                {
+                    new Log("Pause track - no power");
+                    Pause(__instance, isPowered);
+                }
+
             } catch(Exception e)
             {
                 new Error("Something went wrong with updating the Jukebox", e);
@@ -281,8 +288,15 @@ namespace JukeboxSpotify
             Spotify.justStarted = false;
         }
 
-        private static void Pause(Jukebox __instance)
+        private static void Pause(Jukebox __instance, bool isPowered)
         {
+            if (!isPowered)
+            {
+                if (Spotify.spotifyVolume != 0) Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(0)));
+                Spotify.spotifyVolume = 0;
+                Spotify.jukeboxActionTimer = Time.time;
+            }
+
             if (Spotify.manualSpotifyPause && __instance._instance.canvas.enabled)
             {
                 __instance._instance.OnButtonPlayPause();
