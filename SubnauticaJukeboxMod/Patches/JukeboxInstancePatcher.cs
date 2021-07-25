@@ -14,7 +14,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || (!__instance.ConsumePower() && !Spotify.justStarted)) return true;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || (!__instance.ConsumePower() && !Spotify.justStarted)) return true;
                 if (Spotify.beyondFiveMins) return false;
                 text = Spotify.currentTrackTitle;
             }
@@ -32,7 +32,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
                 length = Spotify.currentTrackLength;
             }
             catch (Exception e)
@@ -48,7 +48,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
                 if (Spotify.jukeboxNeedsPlaying && null != __instance)
                 {
                     new Log("jukeboxNeedsPlaying: " + Spotify.jukeboxNeedsPlaying, null);
@@ -68,7 +68,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
 
                 int volumePercentage = (int) (__instance.volume * 100);
 
@@ -102,7 +102,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return true;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return true;
                 if (!IsPowered(__instance)) return false;
                 if (__instance.shuffle == Spotify.spotifyShuffleState) Spotify.client.Player.SetShuffle(new PlayerShuffleRequest(!__instance.shuffle));
             }
@@ -120,7 +120,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return true;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return true;
                 if (!IsPowered(__instance)) return false;
                 new Log("Repeat button pressed");
 
@@ -176,7 +176,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
 
                 new Log("Stop track");
                 Spotify.jukeboxIsPaused = false;
@@ -221,7 +221,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
 
                 if (Spotify.jukeboxIsPlaying || Spotify.jukeboxIsPaused)
                 {
@@ -246,7 +246,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return true;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return true;
 
                 // This is to stop the method getting called very quickly after the first one.
                 if (Spotify.playPauseTimeout + 0.5 > Time.time)

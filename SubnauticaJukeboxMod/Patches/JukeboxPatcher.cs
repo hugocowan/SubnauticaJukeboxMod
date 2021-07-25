@@ -14,7 +14,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
 
                 if (Spotify.repeatTrack)
                 {
@@ -63,7 +63,7 @@ namespace JukeboxSpotify
             {
                 new Log("Application Quit");
                 uGUI_SceneLoadingPatcher.loadingDone = false;
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
                 Spotify.volumeThrottler.Throttle(() => { }); // Clear the throttler
                 if (!Spotify.playingOnStartup)
                 {
@@ -86,7 +86,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || null == Spotify.client) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || null == Spotify.client) return;
 
                 new Log("Play track");
                 Jukebox.volume = 0;
@@ -118,7 +118,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(Jukebox.HandleOpenError))]
         public static void HandleOpenErrorPostfix(Jukebox __instance)
         {
-            if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+            if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
             new Log("We have an open error D: this._failed: " + __instance._failed);
         }
 
@@ -126,7 +126,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(Jukebox.UpdateLowLevel))]
         public static void UpdateLowLevelPrefix(Jukebox __instance)
         {
-            if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+            if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
             __instance._file = "event:/jukebox/jukebox_takethedive"; // This avoids errors and generally makes the jukebox very, Very happy.
         }
 
@@ -141,7 +141,7 @@ namespace JukeboxSpotify
                     KeepAlive();
                 }
 
-                if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client || !uGUI_SceneLoadingPatcher.loadingDone)
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client || !uGUI_SceneLoadingPatcher.loadingDone)
                 {
                     // If the mod has been disabled, make sure the jukebox is reset.
                     if (Spotify.resetJukebox) ResetJukebox(__instance);

@@ -9,7 +9,7 @@ namespace JukeboxSpotify
         [HarmonyPatch("OnGamePaused")]
         public static void OnGamePausedPostfix()
         {
-            if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+            if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
             Spotify.menuPause = true;
         }
 
@@ -17,7 +17,7 @@ namespace JukeboxSpotify
         [HarmonyPatch("OnGameResumed")]
         public static void OnGameResumedPostfix()
         {
-            if (!MainPatcher.Config.enableModToggle || Spotify.noTrack || null == Spotify.client) return;
+            if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
             Spotify.menuPause = false;
         }
 
