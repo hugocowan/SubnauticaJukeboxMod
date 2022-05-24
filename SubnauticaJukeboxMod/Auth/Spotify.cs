@@ -18,13 +18,10 @@ namespace JukeboxSpotify
         public static uint startingPosition = 0;
         public static SpotifyClient client;
         public static bool playingOnStartup = false;
-        public static bool spotifyIsPlaying = false;
-        public static bool jukeboxIsPlaying;
-        public static bool manualJukeboxPause = false;
-        public static bool manualSpotifyPlay = false;
-        public static bool manualSpotifyPause = false;
-        public static bool jukeboxIsPaused = false;
-        public static bool menuPause = false;
+        public static bool isPlaying;
+        public static bool menuPause;
+        public static bool distancePause;
+        public static bool playStateChange;
         public static bool jukeboxNeedsUpdating = false;
         public static bool jukeboxNeedsPlaying = false;
         public static string defaultTitle = "Spotify Jukebox Mod";
@@ -46,7 +43,7 @@ namespace JukeboxSpotify
         public static float refreshSessionTimer = 0;
         public static float refreshSessionExpiryTime = 3600;
         public static float volumeTimer = 0;
-        public static float jukeboxActionTimer = 0;
+        public static float lastJukeboxActionTime = 0;
         public static float currentPosition = 0;
 
         public async static Task SpotifyLogin()
@@ -176,7 +173,8 @@ namespace JukeboxSpotify
 
                 if (uGUI_SceneLoadingPatcher.loadingDone && null != Jukebox.main._instance)
                 {
-                    // This crashes the game. i cri, erry day i cri
+                    // This crashes the game. i cri, erry day i cri.
+                    // This is for the repeat button. As it's commented out, the button does nothing.
                     //while (
                     //    (currentlyPlaying.RepeatState == "context" && Jukebox.repeat != Jukebox.Repeat.All) ||
                     //    (currentlyPlaying.RepeatState == "track" && Jukebox.repeat != Jukebox.Repeat.Track) ||
@@ -194,21 +192,18 @@ namespace JukeboxSpotify
                 if (currentTrackTitle == defaultTitle) playingOnStartup = currentlyPlaying.IsPlaying;
 
                 string oldTrackTitle = currentTrackTitle;
-                spotifyIsPlaying = currentlyPlaying.IsPlaying;
-                startingPosition = (uint)currentlyPlaying.ProgressMs;
-                currentTrackLength = (uint)currentTrack.DurationMs;
-                noTrack = false;
 
                 // Make sure no jukebox actions have taken place in the last second before setting any kind of manual spotify state.
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
-                if ((Time.time > jukeboxActionTimer + 1) && !menuPause && spotifyIsPlaying && (jukeboxIsPaused || !jukeboxIsPlaying))
+                if ((!menuPause && Time.time > lastJukeboxActionTime + 1) && ((currentlyPlaying.IsPlaying && !isPlaying) || (!currentlyPlaying.IsPlaying && isPlaying && !justStarted))) 
                 {
-                    manualSpotifyPlay = true;
+                    isPlaying = currentlyPlaying.IsPlaying;
+                    playStateChange = true;
                 }
-                else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !spotifyIsPlaying && (!jukeboxIsPaused && jukeboxIsPlaying))
-                {
-                    manualSpotifyPause = true;
-                }
+
+                startingPosition = (uint) currentlyPlaying.ProgressMs;
+                currentTrackLength = (uint) currentTrack.DurationMs;
+                noTrack = false;
 
                 if (MainPatcher.Config.includeArtist)
                 {
@@ -229,7 +224,7 @@ namespace JukeboxSpotify
                 // The jukebox is playing and we aren't in a menu or
                 // The track title is wrong or
                 // Spotify has been played via the external player and the jukebox is either stopped or paused.
-                if (uGUI_SceneLoadingPatcher.loadingDone && (playingOnStartup || (!menuPause && jukeboxIsPlaying) || oldTrackTitle != currentTrackTitle || (manualSpotifyPlay && (jukeboxIsPaused || !jukeboxIsPlaying)))) jukeboxNeedsUpdating = true;
+                if (uGUI_SceneLoadingPatcher.loadingDone && (playStateChange || playingOnStartup || (!menuPause && isPlaying) || oldTrackTitle != currentTrackTitle)) jukeboxNeedsUpdating = true;
             }
             catch (Exception e)
             {
