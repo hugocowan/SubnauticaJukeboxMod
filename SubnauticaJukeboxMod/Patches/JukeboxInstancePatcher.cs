@@ -153,11 +153,11 @@ namespace JukeboxSpotify
                         break;
                     case "All":
                         Spotify.repeatTrack = false;
-                        state = PlayerSetRepeatRequest.State.Context;
+                        state = PlayerSetRepeatRequest.State.Off;
                         break;
                     default:
                         Spotify.repeatTrack = false;
-                        state = PlayerSetRepeatRequest.State.Off;
+                        state = PlayerSetRepeatRequest.State.Context;
                         break;
                 }
 

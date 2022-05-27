@@ -165,6 +165,8 @@ namespace JukeboxSpotify
                 bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>(); // Check whether the jukebox is in a SeaTruck.
                 bool isPowered = __instance._instance.ConsumePower();
 
+                //TODO: Fix bug where music is resumed/paused constantly when the sound becomes inaudible.
+
                 // Check if we need to resume or pause the jukebox.
                 if (
                     (!__instance._paused || !Spotify.jukeboxIsPaused || (!Spotify.manualSpotifyPause && Spotify.spotifyIsPlaying)) &&
@@ -175,7 +177,8 @@ namespace JukeboxSpotify
                     )
                 )
                 {
-                    new Log($"Pause track");
+                    new Log($"Pause track \n__instance._audible: {__instance._audible} \nmanualJukeboxPause: {Spotify.manualJukeboxPause} \n" +
+                        $"manualSpotifyPause: {Spotify.manualSpotifyPause} \nmenuPause: {Spotify.menuPause}");
                     Pause(__instance, isPowered);
                 }
                 else if (
@@ -185,11 +188,12 @@ namespace JukeboxSpotify
                         Spotify.manualSpotifyPlay ||
                         (__instance._audible && soundPositionNotOrigin && MainPatcher.Config.pauseOnLeave) ||
                         Spotify.wasPlayingBeforeMenuPause ||
-                        Spotify.manualJukeboxPlay
+                        (__instance._audible && Spotify.manualJukeboxPlay)
                     )
                 )
                 {
-                    new Log($"Resume track");
+                    new Log($"Resume track \n__instance._audible: {__instance._audible} \nwasPlayingBeforeMenuPause: {Spotify.wasPlayingBeforeMenuPause} \n" +
+                        $"manualJukeboxPlay: {Spotify.manualJukeboxPlay}");
                     Resume(__instance);
                 }
 
