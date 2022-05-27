@@ -225,6 +225,7 @@ namespace JukeboxSpotify
                 }
                 else if ((!isPowered && !__instance._paused) || ((Spotify.manualSpotifyPause || __instance._paused || Spotify.menuPause) && !Spotify.jukeboxIsPaused))
                 {
+                    new Log($"Spotify.menuPause: {Spotify.menuPause}");
                     new Log("Pause track");
                     Pause(__instance, isPowered);
                 }
