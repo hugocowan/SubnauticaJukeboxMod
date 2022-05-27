@@ -49,12 +49,13 @@ namespace JukeboxSpotify
             try
             {
                 if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
-                if (Spotify.jukeboxNeedsPlaying && null != __instance)
+                if (Spotify.justStarted && Spotify.playingOnStartup && null != __instance)
                 {
-                    new Log("jukeboxNeedsPlaying: " + Spotify.jukeboxNeedsPlaying, null);
-                    Spotify.jukeboxNeedsPlaying = false;
+                    new Log("Starting jukebox as Spotify is already playing");
                     Jukebox.Play(__instance);
                 }
+                
+                if (Spotify.jukeboxIsPlaying) Spotify.justStarted = false;
             }
             catch (Exception e)
             {
@@ -92,7 +93,6 @@ namespace JukeboxSpotify
             if (Spotify.beyondFiveMins && !Spotify.positionDrag)
             {
                 __instance._position = trackPosition;
-                //Jukebox.main._position = (uint)Spotify.currentPosition * 1000;
             }
         }
 
@@ -181,6 +181,7 @@ namespace JukeboxSpotify
                 new Log("Stop track");
                 Spotify.jukeboxIsPaused = false;
                 Spotify.manualJukeboxPause = true;
+                Spotify.manualJukeboxPlay = false;
                 Spotify.manualSpotifyPause = false;
                 Spotify.manualSpotifyPlay = false;
                 Spotify.jukeboxIsPlaying = false;
@@ -192,6 +193,7 @@ namespace JukeboxSpotify
                 Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100)));
                 if (Spotify.stopCounter >= 1 || !MainPatcher.Config.stopTwiceForStart)
                 {
+                    new Log("Setting track to the start");
                     Spotify.stopCounter = 0;
                     Spotify.timeTrackStarted = Time.time;
                     Spotify.client.Player.SeekTo(new PlayerSeekToRequest(0));
@@ -268,15 +270,17 @@ namespace JukeboxSpotify
                     if (null != Spotify.currentInstance) new Log("New JukeboxInstance does not match previous JukeboxInstance");
                     Spotify.currentInstance = __instance;
                     Spotify.manualJukeboxPause = false;
+                    Spotify.manualJukeboxPlay = true;
                 }
                 else if (!Spotify.jukeboxIsPaused)
                 {
                     Spotify.manualJukeboxPause = true;
+                    Spotify.manualJukeboxPlay = false;
                 }
                 else
                 {
                     Spotify.manualJukeboxPause = false;
-                    Spotify.jukeboxIsPlaying = true;
+                    Spotify.manualJukeboxPlay = true;
                 }
                 // This is needed for the first time we press play.
                 if (!Jukebox.HasFile(__instance._file))

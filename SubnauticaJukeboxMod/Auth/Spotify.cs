@@ -13,20 +13,21 @@ namespace JukeboxSpotify
     {
         private static EmbedIOAuthServer _server;
         public static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(333);
-        public static bool repeatTrack = false;
+        public static bool repeatTrack;
         public static bool justStarted;
         public static uint startingPosition = 0;
         public static SpotifyClient client;
-        public static bool playingOnStartup = false;
-        public static bool spotifyIsPlaying = false;
+        public static bool playingOnStartup;
+        public static bool spotifyIsPlaying;
         public static bool jukeboxIsPlaying;
-        public static bool manualJukeboxPause = false;
-        public static bool manualSpotifyPlay = false;
-        public static bool manualSpotifyPause = false;
-        public static bool jukeboxIsPaused = false;
-        public static bool menuPause = false;
-        public static bool jukeboxNeedsUpdating = false;
-        public static bool jukeboxNeedsPlaying = false;
+        public static bool manualJukeboxPause;
+        public static bool manualJukeboxPlay;
+        public static bool manualSpotifyPlay;
+        public static bool manualSpotifyPause;
+        public static bool jukeboxIsPaused;
+        public static bool menuPause;
+        public static bool wasPlayingBeforeMenuPause;
+        public static bool jukeboxNeedsUpdating;
         public static string defaultTitle = "Spotify Jukebox Mod";
         public static string currentTrackTitle = defaultTitle;
         public static uint currentTrackLength = 0;
@@ -34,8 +35,8 @@ namespace JukeboxSpotify
         public static float playPauseTimeout = 0;
         public static int spotifyVolume = 100;
         public static float jukeboxVolume = Jukebox.volume;
-        public static bool resetJukebox = false;
-        public static bool spotifyShuffleState = false;
+        public static bool resetJukebox;
+        public static bool spotifyShuffleState;
         public static bool noTrack;
         public static bool beyondFiveMins;
         public static bool positionDrag;
@@ -194,7 +195,6 @@ namespace JukeboxSpotify
                 if (currentTrackTitle == defaultTitle) playingOnStartup = currentlyPlaying.IsPlaying;
 
                 string oldTrackTitle = currentTrackTitle;
-                spotifyIsPlaying = currentlyPlaying.IsPlaying;
                 startingPosition = (uint)currentlyPlaying.ProgressMs;
                 currentTrackLength = (uint)currentTrack.DurationMs;
                 noTrack = false;
@@ -203,10 +203,12 @@ namespace JukeboxSpotify
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
                 if ((Time.time > jukeboxActionTimer + 1) && !menuPause && spotifyIsPlaying && (jukeboxIsPaused || !jukeboxIsPlaying))
                 {
+                    spotifyIsPlaying = currentlyPlaying.IsPlaying;
                     manualSpotifyPlay = true;
                 }
                 else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !spotifyIsPlaying && (!jukeboxIsPaused && jukeboxIsPlaying))
                 {
+                    spotifyIsPlaying = currentlyPlaying.IsPlaying;
                     manualSpotifyPause = true;
                 }
 
@@ -224,12 +226,14 @@ namespace JukeboxSpotify
                     currentTrackTitle = currentTrack.Name;
                 }
 
-                // Update the jukebox if we're in the game and
-                // Spotify is playing on startup or
-                // The jukebox is playing and we aren't in a menu or
-                // The track title is wrong or
-                // Spotify has been played via the external player and the jukebox is either stopped or paused.
-                if (uGUI_SceneLoadingPatcher.loadingDone && (playingOnStartup || (!menuPause && jukeboxIsPlaying) || oldTrackTitle != currentTrackTitle || (manualSpotifyPlay && (jukeboxIsPaused || !jukeboxIsPlaying)))) jukeboxNeedsUpdating = true;
+                if (
+                    uGUI_SceneLoadingPatcher.loadingDone && 
+                    (
+                        playingOnStartup || (!menuPause && jukeboxIsPlaying) || 
+                        oldTrackTitle != currentTrackTitle || 
+                        (manualSpotifyPlay && (jukeboxIsPaused || !jukeboxIsPlaying))
+                    )
+                ) jukeboxNeedsUpdating = true;
             }
             catch (Exception e)
             {

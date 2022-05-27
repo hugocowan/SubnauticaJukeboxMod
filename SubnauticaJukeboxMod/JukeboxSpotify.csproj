@@ -137,4 +137,16 @@
   <PropertyGroup>
     <PostBuildEvent>call "$(SolutionDir)moveBuild.cmd" "C:\Program Files (x86)\Steam\steamapps\common\SubnauticaZero\QMods\JukeboxSpotify\" "C:\Users\hugoc\source\repos\SubnauticaJukeboxMod\" "C:\Program Files (x86)\Steam\steamapps\common\SubnauticaZero\SubnauticaZero.exe"</PostBuildEvent>
   </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>SETLOCAL EnableExtensions
+SET EXE=SubnauticaZero.exe
+REM for testing
+REM SET EXE=svchost.exe
+FOR /F %25%25x IN ('tasklist /NH /FI "IMAGENAME eq %25EXE%25"') DO IF NOT %25%25x == %25EXE%25 (
+  ECHO %25EXE%25 is Not Running
+) ELSE (
+  ECHO %25EXE%25 is running, shutting it down.
+  Taskkill /IM %25EXE%25 /F &gt; nul 2&gt; nul
+)</PreBuildEvent>
+  </PropertyGroup>
 </Project>
