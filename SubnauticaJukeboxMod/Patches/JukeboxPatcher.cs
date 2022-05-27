@@ -196,8 +196,8 @@ namespace JukeboxSpotify
                 if (isPowered && soundPositionNotOrigin)
                 {
                     // Here we get the player position in relation to the nearest jukebox or speaker and adjust volume accordingly.
-                    Vector3 position2 = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
-                    float sqrMagnitude = (__instance.soundPosition - position2).sqrMagnitude;
+                    Vector3 playerPosition = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
+                    float sqrMagnitude = (__instance.soundPosition - playerPosition).sqrMagnitude;
                     int volumePercentage = (int)((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100) + 1;
 
                     // If the player is underwater, or if the seatruck jukebox is playing but the player is not in the seatruck, or if a base's jukebox is playing but they aren't in the base,

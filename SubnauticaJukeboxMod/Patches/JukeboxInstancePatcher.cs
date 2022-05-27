@@ -51,8 +51,27 @@ namespace JukeboxSpotify
                 if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
                 if (Spotify.justStarted && Spotify.playingOnStartup && null != __instance)
                 {
-                    new Log("Starting jukebox as Spotify is already playing");
-                    Jukebox.Play(__instance);
+                    new Log("Starting jukebox as Spotify is already playing. Playing closest Jukebox.");
+
+                    JukeboxInstance closestJukeboxInstance = __instance;
+                    float closestJukeboxSquareMagnitude = 9999999999999;
+
+                    // Find the closest JukeboxInstance to the player and pass that one to Jukebox.Play
+                    for (int i = 0; i < JukeboxInstance.all.Count; i++)
+                    {
+                        JukeboxInstance jukeboxInstance = JukeboxInstance.all[i];
+                        jukeboxInstance.GetSoundPosition(out Vector3 jukeboxInstancePosition, out float min, out float power);
+                        Vector3 playerPosition = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
+                        float sqrMagnitude = (jukeboxInstancePosition - playerPosition).sqrMagnitude;
+
+                        if (sqrMagnitude < closestJukeboxSquareMagnitude)
+                        {
+                            closestJukeboxInstance = jukeboxInstance;
+                            closestJukeboxSquareMagnitude = sqrMagnitude;
+                        }
+                    }
+
+                    Jukebox.Play(closestJukeboxInstance);
                 }
                 
                 if (Spotify.jukeboxIsPlaying) Spotify.justStarted = false;
