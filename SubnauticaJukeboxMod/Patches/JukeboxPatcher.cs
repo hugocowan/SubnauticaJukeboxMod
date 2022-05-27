@@ -163,9 +163,7 @@ namespace JukeboxSpotify
 
                 bool soundPositionNotOrigin = __instance.soundPosition.x != 0 && __instance.soundPosition.y != 0 && __instance.soundPosition.z != 0;
                 bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>(); // Check whether the jukebox is in a SeaTruck.
-                bool isPowered = __instance._instance.ConsumePower();
-
-                //TODO: Fix bug where music is resumed/paused constantly when the sound becomes inaudible.
+                bool isPowered = __instance._instance.ConsumePower();s
 
                 // Check if we need to resume or pause the jukebox.
                 if (
