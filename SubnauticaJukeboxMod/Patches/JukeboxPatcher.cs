@@ -136,7 +136,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (MainPatcher.Config.enableModToggle && null != Spotify.client)
+                if (__instance._audible && MainPatcher.Config.enableModToggle && null != Spotify.client)
                 {
                     KeepAlive();
                 }
@@ -195,7 +195,7 @@ namespace JukeboxSpotify
                     Resume(__instance);
                 }
 
-                if (isPowered && soundPositionNotOrigin)
+                if (isPowered && soundPositionNotOrigin && __instance._audible)
                 {
                     // Here we get the player position in relation to the nearest jukebox or speaker and adjust volume accordingly.
                     Vector3 playerPosition = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
@@ -215,8 +215,6 @@ namespace JukeboxSpotify
 
                     int volumeDiff = Math.Abs(Spotify.spotifyVolume - volumePercentage);
 
-                    // If the volume has been the same for 2 seconds, let's give poor Spotify a break from volume requests.
-                    if (volumeDiff <= 1 && Time.time > (Spotify.volumeTimer + 2)) return;
                     if (volumeDiff > 1) Spotify.volumeTimer = Time.time;
 
                     volumePercentage += Spotify.volumeModifier; // This ensures Spotify has sound when it's paused/has 0 volume.
@@ -271,7 +269,7 @@ namespace JukeboxSpotify
 
         private static void Pause(Jukebox __instance, bool isPowered)
         {
-            if (!isPowered)
+            if (!isPowered || !__instance._audible)
             {
                 if (Spotify.spotifyVolume != 0) Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(0)));
                 Spotify.spotifyVolume = 0;
