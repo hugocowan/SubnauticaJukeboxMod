@@ -158,6 +158,7 @@ FOR /F %25%25x IN ('tasklist /NH /FI "IMAGENAME eq %25EXE%25"') DO IF NOT %25%25
 ) ELSE (
   ECHO %25EXE%25 is running, shutting it down.
   Taskkill /IM %25EXE%25 /F &gt; nul 2&gt; nul
+  ping -n 2 localhost &gt;nul
 )</PreBuildEvent>
   </PropertyGroup>
   <Import Project="..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.5\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets" Condition="Exists('..\packages\Stub.System.Data.SQLite.Core.NetFramework.1.0.115.5\build\net46\Stub.System.Data.SQLite.Core.NetFramework.targets')" />

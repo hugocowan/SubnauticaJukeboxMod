@@ -72,9 +72,8 @@ namespace JukeboxSpotify
                     }
 
                     Jukebox.Play(closestJukeboxInstance);
+                    Spotify.justStarted = false;
                 }
-                
-                if (Spotify.jukeboxIsPlaying) Spotify.justStarted = false;
             }
             catch (Exception e)
             {

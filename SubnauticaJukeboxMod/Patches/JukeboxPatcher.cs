@@ -151,6 +151,8 @@ namespace JukeboxSpotify
 
                 if (Spotify.jukeboxNeedsUpdating) UpdateJukebox(__instance);
 
+                if (Spotify.justStarted && Spotify.jukeboxIsPlaying) Spotify.justStarted = false;
+
                 if (Spotify.currentPosition >= 300)
                 {
                     Spotify.beyondFiveMins = true;
@@ -233,7 +235,7 @@ namespace JukeboxSpotify
 
         private static void UpdateJukebox(Jukebox __instance)
         {
-            if (!__instance._audible) return;
+            if (!__instance._audible || !__instance._instance.ConsumePower()) return;
 
             Spotify.jukeboxNeedsUpdating = false;
             if (!__instance._playlist.Contains(Spotify.currentTrackTitle)) __instance._playlist.Add(Spotify.currentTrackTitle);
@@ -329,12 +331,12 @@ namespace JukeboxSpotify
 
         private static void ResetJukebox(Jukebox __instance)
         {
-            Spotify.resetJukebox = false;
-
-            if (Spotify.jukeboxIsPlaying && !Spotify.spotifyIsPlaying)
+            if (Spotify.jukeboxIsPlaying && (Spotify.wasPlayingBeforeMenuPause || !Spotify.jukeboxIsPaused) && !Spotify.spotifyIsPlaying)
             {
                 Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
             }
+
+            Spotify.reset();
 
             if (__instance._instance)
             {

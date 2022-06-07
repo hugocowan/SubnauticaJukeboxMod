@@ -51,6 +51,48 @@ namespace JukeboxSpotify
         public static float jukeboxActionTimer = 0;
         public static float currentPosition = 0;
 
+        public static void reset()
+        {
+            volumeThrottler = new ThrottleDispatcher(333);
+            repeatTrack = false;
+            justStarted = false;
+            startingPosition = 0;
+            client = null;
+            playingOnStartup = false;
+            spotifyIsPlaying = false;
+            jukeboxIsPlaying = false;
+            manualJukeboxPause = false;
+            manualJukeboxPlay = false;
+            manualSpotifyPlay = false;
+            manualSpotifyPause = false;
+            jukeboxIsPaused = false;
+            menuPause = false;
+            distancePause = false;
+            wasPlayingBeforeMenuPause = false;
+            jukeboxNeedsUpdating = false;
+            defaultTitle = "Spotify Jukebox Mod";
+            currentTrackTitle = defaultTitle;
+            currentTrackLength = 0;
+            timeTrackStarted = 0;
+            playPauseTimeout = 0;
+            spotifyVolume = 100;
+            jukeboxVolume = Jukebox.volume;
+            resetJukebox = false;
+            spotifyShuffleState = false;
+            noTrack = false;
+            beyondFiveMins = false;
+            positionDrag = false;
+            currentInstance = null;
+            volumeModifier = 1;
+            stopCounter = 0;
+            getTrackTimer = 0;
+            refreshSessionTimer = 0;
+            refreshSessionExpiryTime = 3600;
+            volumeTimer = 0;
+            jukeboxActionTimer = 0;
+            currentPosition = 0;
+        }
+
         public async static Task SpotifyLogin()
         {
             try
@@ -182,7 +224,7 @@ namespace JukeboxSpotify
                     if (Jukebox.shuffle != currentlyPlaying.ShuffleState) Jukebox.main._instance.OnButtonShuffle();
                 }
 
-                if (currentTrackTitle == defaultTitle) playingOnStartup = currentlyPlaying.IsPlaying;
+                if (justStarted) playingOnStartup = currentlyPlaying.IsPlaying;
 
                 string oldTrackTitle = currentTrackTitle;
                 startingPosition = (uint)currentlyPlaying.ProgressMs;
@@ -192,7 +234,6 @@ namespace JukeboxSpotify
 
                 // Make sure no jukebox actions have taken place in the last second before setting any kind of manual spotify state.
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
-
                 if ((Time.time > jukeboxActionTimer + 1) && !menuPause && spotifyIsPlaying && (!jukeboxIsPlaying || jukeboxIsPaused))
                 {
                     manualSpotifyPlay = true;
