@@ -30,15 +30,11 @@ namespace JukeboxSpotify
                 {
                     new Log("Skip next track");
                     await Spotify.client.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = MainPatcher.Config.deviceId });
-                    Spotify.timeTrackStarted = Time.time;
-                    Spotify.startingPosition = 1000;
                 }
                 else
                 {
                     new Log("Skip previous track");
                     await Spotify.client.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = MainPatcher.Config.deviceId });
-                    Spotify.timeTrackStarted = Time.time;
-                    Spotify.startingPosition = 1000;
                 }
 
                 if (!Spotify.jukeboxIsPlaying)
@@ -46,6 +42,8 @@ namespace JukeboxSpotify
                     await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 }
 
+                Spotify.timeTrackStarted = Time.time;
+                Spotify.startingPosition = 1000;
                 Spotify.manualJukeboxPause = false;
                 Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume)));
             }
@@ -147,6 +145,9 @@ namespace JukeboxSpotify
                     return;
                 }
 
+                // If we don't have a jukebox instance, there is nothing more to be done.
+                if (null == __instance || null == __instance._instance) return;
+
                 if (0 != Jukebox.volume) Jukebox.volume = 0; // If we have toggled the mod off/on, this will not be 0 anymore.
 
                 if (Spotify.jukeboxNeedsUpdating) UpdateJukebox(__instance);
@@ -158,9 +159,6 @@ namespace JukeboxSpotify
                     Spotify.beyondFiveMins = true;
                     __instance._position = (uint)Spotify.currentPosition * 1000;
                 }
-
-                // If we don't have a jukebox instance, there is nothing more to be done.
-                if (null == __instance._instance) return;
 
                 bool soundPositionNotOrigin = __instance.soundPosition.x != 0 && __instance.soundPosition.y != 0 && __instance.soundPosition.z != 0;
                 bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>(); // Check whether the jukebox is in a SeaTruck.

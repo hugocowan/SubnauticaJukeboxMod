@@ -30,9 +30,18 @@ namespace JukeboxSpotify
 
         public string deviceId;
 
-        private void MyCheckboxToggleEvent(ToggleChangedEventArgs e)
+        private async void MyCheckboxToggleEvent(ToggleChangedEventArgs e)
         {
-            if (!e.Value) Spotify.resetJukebox = true;
+            Spotify.manualJukeboxPause = true;
+
+            if (!e.Value)
+            {
+                Spotify.resetJukebox = true;
+            }
+            else
+            {
+                await Spotify.SpotifyLogin();
+            }
         }
     }
 }

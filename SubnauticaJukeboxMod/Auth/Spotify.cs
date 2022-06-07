@@ -53,6 +53,7 @@ namespace JukeboxSpotify
 
         public static void reset()
         {
+            _server = null;
             volumeThrottler = new ThrottleDispatcher(333);
             repeatTrack = false;
             justStarted = false;

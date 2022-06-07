@@ -10,7 +10,7 @@ namespace JukeboxSpotify
         [HarmonyPatch("Awake")]
         public async static void AwakePostfix()
         {
-            await Spotify.SpotifyLogin();
+            if (MainPatcher.Config.enableModToggle) await Spotify.SpotifyLogin();
         }
     }
 }
