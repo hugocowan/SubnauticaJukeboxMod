@@ -124,7 +124,7 @@ namespace JukeboxSpotify
         public static void UpdateLowLevelPrefix(Jukebox __instance)
         {
             if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
-            __instance._file = "event:/jukebox/jukebox_takethedive"; // This avoids errors and generally makes the jukebox very, Very happy.
+            __instance._file = Spotify.defaultTrack; // This avoids errors and generally makes the jukebox very, Very happy.
         }
 
         [HarmonyPostfix]
@@ -338,7 +338,7 @@ namespace JukeboxSpotify
 
             if (__instance._instance)
             {
-                __instance._instance.file = "event:/jukebox/jukebox_takethedive";
+                __instance._instance.file = Spotify.defaultTrack;
                 Jukebox.position = 0;
                 Jukebox.GetNext(__instance._instance, true);
                 Jukebox.Stop();

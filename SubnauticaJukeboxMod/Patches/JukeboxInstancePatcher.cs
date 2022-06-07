@@ -299,10 +299,10 @@ namespace JukeboxSpotify
                     Spotify.manualJukeboxPause = false; Spotify.manualJukeboxPlay = true;
                 }
 
-                // This is needed for the first time we press play.
-                if (!Jukebox.HasFile(__instance._file))
+                // This is needed for the first time we press play on an inactive jukebox.
+                if (__instance._file != Spotify.defaultTrack || !Jukebox.HasFile(__instance._file))
                 {
-                    new Log("Jukebox doesn't have our track");
+                    __instance._file = Spotify.defaultTrack;
                     Jukebox.Play(__instance);
                     return false;
                 }
