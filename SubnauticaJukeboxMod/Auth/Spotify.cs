@@ -26,6 +26,7 @@ namespace JukeboxSpotify
         public static bool manualSpotifyPause;
         public static bool jukeboxIsPaused;
         public static bool menuPause;
+        public static bool distancePause;
         public static bool wasPlayingBeforeMenuPause;
         public static bool jukeboxNeedsUpdating;
         public static string defaultTitle = "Spotify Jukebox Mod";
@@ -177,17 +178,6 @@ namespace JukeboxSpotify
 
                 if (uGUI_SceneLoadingPatcher.loadingDone && null != Jukebox.main._instance)
                 {
-                    // This crashes the game. i cri, erry day i cri
-                    //while (
-                    //    (currentlyPlaying.RepeatState == "context" && Jukebox.repeat != Jukebox.Repeat.All) ||
-                    //    (currentlyPlaying.RepeatState == "track" && Jukebox.repeat != Jukebox.Repeat.Track) ||
-                    //    (currentlyPlaying.RepeatState == "off" && Jukebox.repeat != Jukebox.Repeat.Off)
-                    //)
-                    //{
-                    //    new Log("Hitting the repeat button.");
-                    //    Jukebox.main._instance.OnButtonRepeat();
-                    //    await Task.Delay(500);
-                    //}
                     spotifyShuffleState = currentlyPlaying.ShuffleState;
                     if (Jukebox.shuffle != currentlyPlaying.ShuffleState) Jukebox.main._instance.OnButtonShuffle();
                 }
@@ -197,18 +187,18 @@ namespace JukeboxSpotify
                 string oldTrackTitle = currentTrackTitle;
                 startingPosition = (uint)currentlyPlaying.ProgressMs;
                 currentTrackLength = (uint)currentTrack.DurationMs;
+                spotifyIsPlaying = currentlyPlaying.IsPlaying;
                 noTrack = false;
 
                 // Make sure no jukebox actions have taken place in the last second before setting any kind of manual spotify state.
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
-                if ((Time.time > jukeboxActionTimer + 1) && !menuPause && spotifyIsPlaying && (jukeboxIsPaused || !jukeboxIsPlaying))
+
+                if ((Time.time > jukeboxActionTimer + 1) && !menuPause && spotifyIsPlaying && (!jukeboxIsPlaying || jukeboxIsPaused))
                 {
-                    spotifyIsPlaying = currentlyPlaying.IsPlaying;
                     manualSpotifyPlay = true;
                 }
-                else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !spotifyIsPlaying && (!jukeboxIsPaused && jukeboxIsPlaying))
+                else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !spotifyIsPlaying && jukeboxIsPlaying && !jukeboxIsPaused)
                 {
-                    spotifyIsPlaying = currentlyPlaying.IsPlaying;
                     manualSpotifyPause = true;
                 }
 

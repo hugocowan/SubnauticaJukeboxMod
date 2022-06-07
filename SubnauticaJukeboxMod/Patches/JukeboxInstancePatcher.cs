@@ -207,8 +207,7 @@ namespace JukeboxSpotify
                 Spotify.startingPosition = 0;
                 Spotify.jukeboxActionTimer = Time.time;
 
-                if (Spotify.spotifyIsPlaying) Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
-                Spotify.spotifyIsPlaying = false;
+                Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100)));
                 if (Spotify.stopCounter >= 1 || !MainPatcher.Config.stopTwiceForStart)
                 {
