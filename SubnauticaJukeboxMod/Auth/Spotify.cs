@@ -18,6 +18,7 @@ namespace JukeboxSpotify
         public static uint startingPosition = 0;
         public static SpotifyClient client;
         public static bool playingOnStartup;
+        public static bool newJukeboxInstance;
         public static bool spotifyIsPlaying;
         public static bool jukeboxIsPlaying;
         public static bool manualJukeboxPause;
@@ -61,6 +62,7 @@ namespace JukeboxSpotify
             startingPosition = 0;
             client = null;
             playingOnStartup = false;
+            newJukeboxInstance = false;
             spotifyIsPlaying = false;
             jukeboxIsPlaying = false;
             manualJukeboxPause = false;

@@ -15,7 +15,8 @@ namespace JukeboxSpotify
             try
             {
                 if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || (!__instance.ConsumePower() && !Spotify.justStarted)) return true;
-                if (Spotify.beyondFiveMins) return false;
+                if (Spotify.beyondFiveMins && !Spotify.newJukeboxInstance) return false;
+                if (Spotify.newJukeboxInstance) Spotify.newJukeboxInstance = false;
                 text = Spotify.currentTrackTitle;
             }
             catch (Exception e)
@@ -286,7 +287,11 @@ namespace JukeboxSpotify
 
                 if (__instance != Spotify.currentInstance)
                 {
-                    if (null != Spotify.currentInstance) new Log("New JukeboxInstance does not match previous JukeboxInstance");
+                    if (null != Spotify.currentInstance)
+                    {
+                        new Log("New JukeboxInstance does not match previous JukeboxInstance");
+                        Spotify.newJukeboxInstance = true;
+                    }
                     __instance._file = Spotify.defaultTrack;
                     Spotify.currentInstance = __instance;
                     Spotify.manualJukeboxPause = false; Spotify.manualJukeboxPlay = true;
