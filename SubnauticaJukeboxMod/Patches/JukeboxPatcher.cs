@@ -150,15 +150,19 @@ namespace JukeboxSpotify
 
                 if (0 != Jukebox.volume) Jukebox.volume = 0; // If we have toggled the mod off/on, this will not be 0 anymore.
 
-                if (Spotify.jukeboxNeedsUpdating) UpdateJukebox(__instance);
-
-                if (Spotify.justStarted && Spotify.jukeboxIsPlaying) Spotify.justStarted = false;
-
                 if (Spotify.currentPosition >= 300)
                 {
                     Spotify.beyondFiveMins = true;
-                    __instance._position = (uint)Spotify.currentPosition * 1000;
+                    __instance._position = (uint) Spotify.currentPosition * 1000;
                 }
+                else
+                {
+                    Spotify.beyondFiveMins = false;
+                }
+
+                if (Spotify.jukeboxNeedsUpdating) UpdateJukebox(__instance);
+
+                if (Spotify.justStarted && Spotify.jukeboxIsPlaying) Spotify.justStarted = false;
 
                 bool soundPositionNotOrigin = __instance.soundPosition.x != 0 && __instance.soundPosition.y != 0 && __instance.soundPosition.z != 0;
                 bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>(); // Check whether the jukebox is in a SeaTruck.

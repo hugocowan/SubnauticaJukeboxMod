@@ -287,6 +287,7 @@ namespace JukeboxSpotify
                 if (__instance != Spotify.currentInstance)
                 {
                     if (null != Spotify.currentInstance) new Log("New JukeboxInstance does not match previous JukeboxInstance");
+                    __instance._file = Spotify.defaultTrack;
                     Spotify.currentInstance = __instance;
                     Spotify.manualJukeboxPause = false; Spotify.manualJukeboxPlay = true;
                 }
@@ -300,9 +301,8 @@ namespace JukeboxSpotify
                 }
 
                 // This is needed for the first time we press play on an inactive jukebox.
-                if (__instance._file != Spotify.defaultTrack || !Jukebox.HasFile(__instance._file))
+                if (!Jukebox.HasFile(__instance._file))
                 {
-                    __instance._file = Spotify.defaultTrack;
                     Jukebox.Play(__instance);
                     return false;
                 }
