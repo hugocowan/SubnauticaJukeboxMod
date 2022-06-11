@@ -90,8 +90,7 @@ namespace JukeboxSpotify
                 Jukebox.volume = 0;
                 Spotify.jukeboxIsPlaying = true;
                 Spotify.manualPause = false; 
-                Spotify.manualSpotifyPlay = false;
-                Spotify.manualJukeboxPlay = false;
+                Spotify.manualPlay = false;
                 Spotify.stopCounter = 0;
                 Spotify.volumeTimer = 0;
 
@@ -171,7 +170,7 @@ namespace JukeboxSpotify
 
                 // Check if we need to pause/resume the jukebox.
                 if (
-                    !Spotify.manualSpotifyPlay &&
+                    !Spotify.manualPlay &&
                     (!__instance._paused || !Spotify.jukeboxIsPaused) &&
                     (
                         !isPowered ||
@@ -188,10 +187,9 @@ namespace JukeboxSpotify
                     (__instance._paused || Spotify.jukeboxIsPaused) && 
                     !Spotify.manualPause && !Spotify.menuPause &&
                     (
-                        Spotify.manualSpotifyPlay ||
                         (__instance._audible && soundPositionNotOrigin && MainPatcher.Config.pauseOnLeave && Spotify.distancePause) ||
                         Spotify.wasPlayingBeforeMenuPause ||
-                        (__instance._audible && Spotify.manualJukeboxPlay)
+                        (__instance._audible && Spotify.manualPlay)
                     )
                 )
                 {
@@ -301,7 +299,7 @@ namespace JukeboxSpotify
 
         private static void Resume(Jukebox __instance)
         {
-            if (Spotify.manualSpotifyPlay && __instance._instance.canvas.enabled)
+            if (Spotify.manualPlay && __instance._instance.canvas.enabled)
             {
                 __instance._instance.OnButtonPlayPause();
             }
@@ -312,7 +310,7 @@ namespace JukeboxSpotify
 
             Spotify.jukeboxIsPaused = false;
             Spotify.wasPlayingBeforeMenuPause = false;
-            Spotify.manualJukeboxPlay = false;
+            Spotify.manualPlay = false;
             Spotify.jukeboxActionTimer = Time.time;
             Spotify.distancePause = false;
 

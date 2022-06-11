@@ -21,8 +21,7 @@ namespace JukeboxSpotify
         public static bool newJukeboxInstance;
         public static bool jukeboxIsPlaying;
         public static bool manualPause;
-        public static bool manualJukeboxPlay;
-        public static bool manualSpotifyPlay;
+        public static bool manualPlay;
         public static bool jukeboxIsPaused;
         public static bool menuPause;
         public static bool distancePause;
@@ -63,8 +62,7 @@ namespace JukeboxSpotify
             newJukeboxInstance = false;
             jukeboxIsPlaying = false;
             manualPause = false;
-            manualJukeboxPlay = false;
-            manualSpotifyPlay = false;
+            manualPlay = false;
             jukeboxIsPaused = false;
             menuPause = false;
             distancePause = false;
@@ -234,7 +232,7 @@ namespace JukeboxSpotify
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
                 if ((Time.time > jukeboxActionTimer + 1) && !menuPause && currentlyPlaying.IsPlaying && (!jukeboxIsPlaying || jukeboxIsPaused))
                 {
-                    manualSpotifyPlay = true;
+                    manualPlay = true;
                 }
                 else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !currentlyPlaying.IsPlaying && jukeboxIsPlaying && !jukeboxIsPaused)
                 {
@@ -260,7 +258,7 @@ namespace JukeboxSpotify
                     (
                         playingOnStartup || (!menuPause && jukeboxIsPlaying) || 
                         oldTrackTitle != currentTrackTitle || 
-                        (manualSpotifyPlay && (jukeboxIsPaused || !jukeboxIsPlaying))
+                        (manualPlay && (jukeboxIsPaused || !jukeboxIsPlaying))
                     )
                 ) jukeboxNeedsUpdating = true;
             }

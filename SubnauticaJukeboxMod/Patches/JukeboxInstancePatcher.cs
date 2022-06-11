@@ -50,7 +50,7 @@ namespace JukeboxSpotify
             try
             {
                 if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
-                if (Spotify.justStarted && (Spotify.playingOnStartup || Spotify.manualSpotifyPlay) && null != __instance)
+                if (Spotify.justStarted && (Spotify.playingOnStartup || Spotify.manualPlay) && null != __instance)
                 {
                     new Log("Starting jukebox as Spotify is already playing. Playing closest Jukebox.");
 
@@ -200,8 +200,7 @@ namespace JukeboxSpotify
                 new Log("Stop track");
                 Spotify.jukeboxIsPaused = false;
                 Spotify.manualPause = true; 
-                Spotify.manualJukeboxPlay = false;
-                Spotify.manualSpotifyPlay = false;
+                Spotify.manualPlay = false;
                 Spotify.jukeboxIsPlaying = false;
                 Spotify.startingPosition = 0;
                 Spotify.jukeboxActionTimer = Time.time;
@@ -277,12 +276,12 @@ namespace JukeboxSpotify
                 if (!IsPowered(__instance)) return false;
 
                 Spotify.manualPause = false;
+                Spotify.manualPlay = false;
                 Spotify.playPauseTimeout = Time.time;
                 Spotify.stopCounter = 0;
                 Spotify.volumeTimer = 0;
                 Spotify.jukeboxVolume = __instance.volume;
                 Spotify.jukeboxActionTimer = Time.time;
-                Spotify.manualSpotifyPlay = false;
 
                 if (__instance != Spotify.currentInstance)
                 {
@@ -293,16 +292,15 @@ namespace JukeboxSpotify
                     }
                     __instance._file = Spotify.defaultTrack;
                     Spotify.currentInstance = __instance;
-                    Spotify.manualJukeboxPlay = true;
+                    Spotify.manualPlay = true;
                 }
                 else if (!Spotify.jukeboxIsPaused)
                 {
-                    Spotify.manualPause = true; 
-                    Spotify.manualJukeboxPlay = false;
+                    Spotify.manualPause = true;
                 }
                 else
                 {
-                    Spotify.manualJukeboxPlay = true;
+                    Spotify.manualPlay = true;
                 }
 
                 // This is needed for the first time we press play on an inactive jukebox.
