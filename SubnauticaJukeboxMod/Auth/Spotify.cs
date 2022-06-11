@@ -20,10 +20,9 @@ namespace JukeboxSpotify
         public static bool playingOnStartup;
         public static bool newJukeboxInstance;
         public static bool jukeboxIsPlaying;
-        public static bool manualJukeboxPause;
+        public static bool manualPause;
         public static bool manualJukeboxPlay;
         public static bool manualSpotifyPlay;
-        public static bool manualSpotifyPause;
         public static bool jukeboxIsPaused;
         public static bool menuPause;
         public static bool distancePause;
@@ -63,10 +62,9 @@ namespace JukeboxSpotify
             playingOnStartup = false;
             newJukeboxInstance = false;
             jukeboxIsPlaying = false;
-            manualJukeboxPause = false;
+            manualPause = false;
             manualJukeboxPlay = false;
             manualSpotifyPlay = false;
-            manualSpotifyPause = false;
             jukeboxIsPaused = false;
             menuPause = false;
             distancePause = false;
@@ -240,7 +238,7 @@ namespace JukeboxSpotify
                 }
                 else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !currentlyPlaying.IsPlaying && jukeboxIsPlaying && !jukeboxIsPaused)
                 {
-                    manualSpotifyPause = true;
+                    manualPause = true;
                 }
 
                 if (MainPatcher.Config.includeArtist)

@@ -199,9 +199,8 @@ namespace JukeboxSpotify
 
                 new Log("Stop track");
                 Spotify.jukeboxIsPaused = false;
-                Spotify.manualJukeboxPause = true; 
+                Spotify.manualPause = true; 
                 Spotify.manualJukeboxPlay = false;
-                Spotify.manualSpotifyPause = false; 
                 Spotify.manualSpotifyPlay = false;
                 Spotify.jukeboxIsPlaying = false;
                 Spotify.startingPosition = 0;
@@ -277,13 +276,13 @@ namespace JukeboxSpotify
 
                 if (!IsPowered(__instance)) return false;
 
-                Spotify.manualSpotifyPause = false;
+                Spotify.manualPause = false;
                 Spotify.playPauseTimeout = Time.time;
                 Spotify.stopCounter = 0;
                 Spotify.volumeTimer = 0;
                 Spotify.jukeboxVolume = __instance.volume;
                 Spotify.jukeboxActionTimer = Time.time;
-                Spotify.manualSpotifyPause = false; Spotify.manualSpotifyPlay = false;
+                Spotify.manualSpotifyPlay = false;
 
                 if (__instance != Spotify.currentInstance)
                 {
@@ -294,15 +293,16 @@ namespace JukeboxSpotify
                     }
                     __instance._file = Spotify.defaultTrack;
                     Spotify.currentInstance = __instance;
-                    Spotify.manualJukeboxPause = false; Spotify.manualJukeboxPlay = true;
+                    Spotify.manualJukeboxPlay = true;
                 }
                 else if (!Spotify.jukeboxIsPaused)
                 {
-                    Spotify.manualJukeboxPause = true; Spotify.manualJukeboxPlay = false;
+                    Spotify.manualPause = true; 
+                    Spotify.manualJukeboxPlay = false;
                 }
                 else
                 {
-                    Spotify.manualJukeboxPause = false; Spotify.manualJukeboxPlay = true;
+                    Spotify.manualJukeboxPlay = true;
                 }
 
                 // This is needed for the first time we press play on an inactive jukebox.

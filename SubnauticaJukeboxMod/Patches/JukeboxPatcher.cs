@@ -44,7 +44,7 @@ namespace JukeboxSpotify
 
                 Spotify.timeTrackStarted = Time.time;
                 Spotify.startingPosition = 1000;
-                Spotify.manualJukeboxPause = false;
+                Spotify.manualPause = false;
                 Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(Spotify.spotifyVolume)));
             }
             catch (Exception e)
@@ -89,8 +89,9 @@ namespace JukeboxSpotify
                 new Log("Play track");
                 Jukebox.volume = 0;
                 Spotify.jukeboxIsPlaying = true;
-                Spotify.manualSpotifyPause = false; Spotify.manualSpotifyPlay = false;
-                Spotify.manualJukeboxPause = false; Spotify.manualJukeboxPlay = false;
+                Spotify.manualPause = false; 
+                Spotify.manualSpotifyPlay = false;
+                Spotify.manualJukeboxPlay = false;
                 Spotify.stopCounter = 0;
                 Spotify.volumeTimer = 0;
 
@@ -174,7 +175,7 @@ namespace JukeboxSpotify
                     (!__instance._paused || !Spotify.jukeboxIsPaused) &&
                     (
                         !isPowered ||
-                        Spotify.manualJukeboxPause || Spotify.manualSpotifyPause || Spotify.menuPause ||
+                        Spotify.manualPause || Spotify.menuPause ||
                         (!__instance._audible && soundPositionNotOrigin && MainPatcher.Config.pauseOnLeave)
                     )
                 )
@@ -185,7 +186,7 @@ namespace JukeboxSpotify
                 else if (
                     isPowered &&
                     (__instance._paused || Spotify.jukeboxIsPaused) && 
-                    !Spotify.manualJukeboxPause && !Spotify.manualSpotifyPause && !Spotify.menuPause &&
+                    !Spotify.manualPause && !Spotify.menuPause &&
                     (
                         Spotify.manualSpotifyPlay ||
                         (__instance._audible && soundPositionNotOrigin && MainPatcher.Config.pauseOnLeave && Spotify.distancePause) ||
@@ -282,7 +283,7 @@ namespace JukeboxSpotify
 
             if (!__instance._audible) Spotify.distancePause = true;
 
-            if (Spotify.manualSpotifyPause && __instance._instance.canvas.enabled)
+            if (Spotify.manualPause && __instance._instance.canvas.enabled)
             {
                 __instance._instance.OnButtonPlayPause();
             }
@@ -293,7 +294,7 @@ namespace JukeboxSpotify
 
             Spotify.jukeboxIsPaused = true;
             Spotify.jukeboxActionTimer = Time.time;
-            Spotify.manualJukeboxPause = false;
+            Spotify.manualPause = false;
 
             Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
         }
