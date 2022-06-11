@@ -37,7 +37,7 @@ namespace JukeboxSpotify
                     await Spotify.client.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = MainPatcher.Config.deviceId });
                 }
 
-                if (!Spotify.jukeboxIsPlaying)
+                if (!Spotify.jukeboxIsRunning)
                 {
                     await Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 }
@@ -67,7 +67,7 @@ namespace JukeboxSpotify
                 {
                     var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId };
                     Spotify.client.Player.PausePlayback(playbackRequest);
-                    Spotify.jukeboxIsPlaying = false;
+                    Spotify.jukeboxIsRunning = false;
                 }
                 
                 Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100));
@@ -88,7 +88,7 @@ namespace JukeboxSpotify
 
                 new Log("Play track");
                 Jukebox.volume = 0;
-                Spotify.jukeboxIsPlaying = true;
+                Spotify.jukeboxIsRunning = true;
                 Spotify.manualPause = false; 
                 Spotify.manualPlay = false;
                 Spotify.stopCounter = 0;
@@ -162,7 +162,7 @@ namespace JukeboxSpotify
 
                 if (Spotify.jukeboxNeedsUpdating) UpdateJukebox(__instance);
 
-                if (Spotify.justStarted && Spotify.jukeboxIsPlaying) Spotify.justStarted = false;
+                if (Spotify.justStarted && Spotify.jukeboxIsRunning) Spotify.justStarted = false;
 
                 bool soundPositionNotOrigin = __instance.soundPosition.x != 0 && __instance.soundPosition.y != 0 && __instance.soundPosition.z != 0;
                 bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>(); // Check whether the jukebox is in a SeaTruck.

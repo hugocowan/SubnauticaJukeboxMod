@@ -19,7 +19,7 @@ namespace JukeboxSpotify
         public static SpotifyClient client;
         public static bool playingOnStartup;
         public static bool newJukeboxInstance;
-        public static bool jukeboxIsPlaying;
+        public static bool jukeboxIsRunning;
         public static bool manualPause;
         public static bool manualPlay;
         public static bool jukeboxIsPaused;
@@ -60,7 +60,7 @@ namespace JukeboxSpotify
             client = null;
             playingOnStartup = false;
             newJukeboxInstance = false;
-            jukeboxIsPlaying = false;
+            jukeboxIsRunning = false;
             manualPause = false;
             manualPlay = false;
             jukeboxIsPaused = false;
@@ -230,11 +230,11 @@ namespace JukeboxSpotify
 
                 // Make sure no jukebox actions have taken place in the last second before setting any kind of manual spotify state.
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
-                if ((Time.time > jukeboxActionTimer + 1) && !menuPause && currentlyPlaying.IsPlaying && (!jukeboxIsPlaying || jukeboxIsPaused))
+                if ((Time.time > jukeboxActionTimer + 1) && !menuPause && currentlyPlaying.IsPlaying && (!jukeboxIsRunning || jukeboxIsPaused))
                 {
                     manualPlay = true;
                 }
-                else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !currentlyPlaying.IsPlaying && jukeboxIsPlaying && !jukeboxIsPaused)
+                else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !currentlyPlaying.IsPlaying && jukeboxIsRunning && !jukeboxIsPaused)
                 {
                     manualPause = true;
                 }
@@ -256,9 +256,9 @@ namespace JukeboxSpotify
                 if (
                     uGUI_SceneLoadingPatcher.loadingDone && 
                     (
-                        playingOnStartup || (!menuPause && jukeboxIsPlaying) || 
+                        playingOnStartup || (!menuPause && jukeboxIsRunning) || 
                         oldTrackTitle != currentTrackTitle || 
-                        (manualPlay && (jukeboxIsPaused || !jukeboxIsPlaying))
+                        (manualPlay && (jukeboxIsPaused || !jukeboxIsRunning))
                     )
                 ) jukeboxNeedsUpdating = true;
             }

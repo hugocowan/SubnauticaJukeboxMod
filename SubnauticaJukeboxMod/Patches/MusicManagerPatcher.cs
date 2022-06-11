@@ -11,7 +11,7 @@ namespace JukeboxSpotify
         {
             if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
             Spotify.menuPause = true;
-            Spotify.wasPlayingBeforeMenuPause = (Spotify.jukeboxIsPlaying && !Spotify.jukeboxIsPaused);
+            Spotify.wasPlayingBeforeMenuPause = (Spotify.jukeboxIsRunning && !Spotify.jukeboxIsPaused);
         }
 
         [HarmonyPostfix]

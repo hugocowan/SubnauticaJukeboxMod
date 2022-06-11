@@ -201,7 +201,7 @@ namespace JukeboxSpotify
                 Spotify.jukeboxIsPaused = false;
                 Spotify.manualPause = true; 
                 Spotify.manualPlay = false;
-                Spotify.jukeboxIsPlaying = false;
+                Spotify.jukeboxIsRunning = false;
                 Spotify.startingPosition = 0;
                 Spotify.jukeboxActionTimer = Time.time;
 
@@ -241,7 +241,7 @@ namespace JukeboxSpotify
             {
                 if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
 
-                if (Spotify.jukeboxIsPlaying || Spotify.jukeboxIsPaused)
+                if (Spotify.jukeboxIsRunning || Spotify.jukeboxIsPaused)
                 {
                     long trackPosition = (long) (Spotify.currentTrackLength * __instance._position); // _position is a percentage
                     Spotify.beyondFiveMins = (trackPosition / 1000) >= 300;
