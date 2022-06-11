@@ -333,11 +333,6 @@ namespace JukeboxSpotify
 
         private static void ResetJukebox(Jukebox __instance)
         {
-            if (Spotify.jukeboxIsPlaying && (Spotify.wasPlayingBeforeMenuPause || !Spotify.jukeboxIsPaused) && !Spotify.spotifyIsPlaying)
-            {
-                Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
-            }
-
             Spotify.reset();
 
             if (__instance._instance)

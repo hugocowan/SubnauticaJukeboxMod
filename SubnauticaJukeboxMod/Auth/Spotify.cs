@@ -19,7 +19,6 @@ namespace JukeboxSpotify
         public static SpotifyClient client;
         public static bool playingOnStartup;
         public static bool newJukeboxInstance;
-        public static bool spotifyIsPlaying;
         public static bool jukeboxIsPlaying;
         public static bool manualJukeboxPause;
         public static bool manualJukeboxPlay;
@@ -63,7 +62,6 @@ namespace JukeboxSpotify
             client = null;
             playingOnStartup = false;
             newJukeboxInstance = false;
-            spotifyIsPlaying = false;
             jukeboxIsPlaying = false;
             manualJukeboxPause = false;
             manualJukeboxPlay = false;
@@ -232,16 +230,15 @@ namespace JukeboxSpotify
                 string oldTrackTitle = currentTrackTitle;
                 startingPosition = (uint)currentlyPlaying.ProgressMs;
                 currentTrackLength = (uint)currentTrack.DurationMs;
-                spotifyIsPlaying = currentlyPlaying.IsPlaying;
                 noTrack = false;
 
                 // Make sure no jukebox actions have taken place in the last second before setting any kind of manual spotify state.
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
-                if ((Time.time > jukeboxActionTimer + 1) && !menuPause && spotifyIsPlaying && (!jukeboxIsPlaying || jukeboxIsPaused))
+                if ((Time.time > jukeboxActionTimer + 1) && !menuPause && currentlyPlaying.IsPlaying && (!jukeboxIsPlaying || jukeboxIsPaused))
                 {
                     manualSpotifyPlay = true;
                 }
-                else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !spotifyIsPlaying && jukeboxIsPlaying && !jukeboxIsPaused)
+                else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !currentlyPlaying.IsPlaying && jukeboxIsPlaying && !jukeboxIsPaused)
                 {
                     manualSpotifyPause = true;
                 }
