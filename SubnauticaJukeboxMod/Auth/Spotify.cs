@@ -27,9 +27,8 @@ namespace JukeboxSpotify
         public static bool distancePause;
         public static bool wasPlayingBeforeMenuPause;
         public static bool jukeboxNeedsUpdating;
-        public static string defaultTitle = "Spotify Jukebox Mod";
         public static string defaultTrack = "event:/jukebox/jukebox_takethedive";
-        public static string currentTrackTitle = defaultTitle;
+        public static string currentTrackTitle = "Spotify Jukebox Mod";
         public static uint currentTrackLength = 0;
         public static float timeTrackStarted = 0;
         public static float playPauseTimeout = 0;
@@ -68,7 +67,7 @@ namespace JukeboxSpotify
             distancePause = false;
             wasPlayingBeforeMenuPause = false;
             jukeboxNeedsUpdating = false;
-            currentTrackTitle = defaultTitle;
+            currentTrackTitle = "Spotify Jukebox Mod";
             currentTrackLength = 0;
             timeTrackStarted = 0;
             playPauseTimeout = 0;

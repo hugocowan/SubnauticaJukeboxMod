@@ -197,37 +197,8 @@ namespace JukeboxSpotify
                     Resume(__instance);
                 }
 
-                if (isPowered && soundPositionNotOrigin && __instance._audible)
-                {
-                    // Here we get the player position in relation to the nearest jukebox or speaker and adjust volume accordingly.
-                    Vector3 playerPosition = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
-                    float sqrMagnitude = (__instance.soundPosition - playerPosition).sqrMagnitude;
-                    int volumePercentage = (int)((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100) + 1;
+                UpdateVolume(__instance, isPowered, soundPositionNotOrigin, seaTruckJukeboxPlaying);
 
-                    // If the player is underwater, or if the seatruck jukebox is playing but the player is not in the seatruck, or if a base's jukebox is playing but they aren't in the base,
-                    // halve the music volume as there is a body of water between the jukebox and the player.
-                    if (
-                        null != Player.main && (true == Player.main.isUnderwater.value) ||
-                        (seaTruckJukeboxPlaying && (null == Player.main.currentInterior || Player.main.currentInterior.GetType().ToString() != "SeaTruckSegment")) ||
-                        (!seaTruckJukeboxPlaying && (null == Player.main.currentInterior || Player.main.currentInterior.GetType().ToString() != "BaseRoot"))
-                        )
-                    {
-                        volumePercentage /= 2;
-                    }
-
-                    int volumeDiff = Math.Abs(Spotify.spotifyVolume - volumePercentage);
-
-                    if (volumeDiff > 1) Spotify.volumeTimer = Time.time;
-
-                    volumePercentage += Spotify.volumeModifier; // This ensures Spotify has sound when it's paused/has 0 volume.
-                    Spotify.volumeModifier = (Spotify.volumeModifier < 0) ? 0 : -1;
-
-                    if (volumePercentage < 0) volumePercentage = 0;
-                    if (volumePercentage > 100) volumePercentage = 100;
-
-                    Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
-                    Spotify.spotifyVolume = volumePercentage;
-                }
             } catch(Exception e)
             {
                 new Error("Something went wrong with updating the Jukebox", e);
@@ -315,6 +286,41 @@ namespace JukeboxSpotify
             Spotify.distancePause = false;
 
             Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
+        }
+
+        private static void UpdateVolume(Jukebox __instance, bool isPowered, bool soundPositionNotOrigin, bool seaTruckJukeboxPlaying)
+        {
+            if (isPowered && soundPositionNotOrigin && __instance._audible)
+            {
+                // Here we get the player position in relation to the nearest jukebox or speaker and adjust volume accordingly.
+                Vector3 playerPosition = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
+                float sqrMagnitude = (__instance.soundPosition - playerPosition).sqrMagnitude;
+                int volumePercentage = (int)((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100) + 1;
+
+                // If the player is underwater, or if the seatruck jukebox is playing but the player is not in the seatruck, or if a base's jukebox is playing but they aren't in the base,
+                // halve the music volume as there is a body of water between the jukebox and the player.
+                if (
+                    null != Player.main && (true == Player.main.isUnderwater.value) ||
+                    (seaTruckJukeboxPlaying && (null == Player.main.currentInterior || Player.main.currentInterior.GetType().ToString() != "SeaTruckSegment")) ||
+                    (!seaTruckJukeboxPlaying && (null == Player.main.currentInterior || Player.main.currentInterior.GetType().ToString() != "BaseRoot"))
+                    )
+                {
+                    volumePercentage /= 2;
+                }
+
+                int volumeDiff = Math.Abs(Spotify.spotifyVolume - volumePercentage);
+
+                if (volumeDiff > 1) Spotify.volumeTimer = Time.time;
+
+                volumePercentage += Spotify.volumeModifier; // This ensures Spotify has sound when it's paused/has 0 volume.
+                Spotify.volumeModifier = (Spotify.volumeModifier < 0) ? 0 : -1;
+
+                if (volumePercentage < 0) volumePercentage = 0;
+                if (volumePercentage > 100) volumePercentage = 100;
+
+                Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
+                Spotify.spotifyVolume = volumePercentage;
+            }
         }
 
         private static void KeepAlive()
