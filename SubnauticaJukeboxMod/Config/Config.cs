@@ -32,11 +32,11 @@ namespace JukeboxSpotify
 
         private async void MyCheckboxToggleEvent(ToggleChangedEventArgs e)
         {
-            Spotify.manualPause = true;
+            Vars.manualPause = true;
 
             if (!e.Value)
             {
-                Spotify.resetJukebox = true;
+                Vars.resetJukebox = true;
             }
             else
             {

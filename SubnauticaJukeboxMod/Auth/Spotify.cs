@@ -1,5 +1,4 @@
-﻿using DebounceThrottle;
-using QModManager.API;
+﻿using QModManager.API;
 using SpotifyAPI.Web;
 using SpotifyAPI.Web.Auth;
 using System;
@@ -11,84 +10,6 @@ namespace JukeboxSpotify
 {
     class Spotify
     {
-        private static EmbedIOAuthServer _server;
-        public static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(333);
-        public static bool repeatTrack;
-        public static bool justStarted;
-        public static uint startingPosition = 0;
-        public static SpotifyClient client;
-        public static bool playingOnStartup;
-        public static bool newJukeboxInstance;
-        public static bool jukeboxIsRunning;
-        public static bool manualPause;
-        public static bool manualPlay;
-        public static bool jukeboxIsPaused;
-        public static bool menuPause;
-        public static bool distancePause;
-        public static bool wasPlayingBeforeMenuPause;
-        public static bool jukeboxNeedsUpdating;
-        public static string defaultTrack = "event:/jukebox/jukebox_takethedive";
-        public static string currentTrackTitle = "Spotify Jukebox Mod";
-        public static uint currentTrackLength = 0;
-        public static float timeTrackStarted = 0;
-        public static float playPauseTimeout = 0;
-        public static int spotifyVolume = 100;
-        public static float jukeboxVolume = Jukebox.volume;
-        public static bool resetJukebox;
-        public static bool spotifyShuffleState;
-        public static bool noTrack;
-        public static bool beyondFiveMins;
-        public static bool positionDrag;
-        public static JukeboxInstance currentInstance = null;
-        public static int volumeModifier = 1;
-        public static int stopCounter = 0;
-        public static float getTrackTimer = 0;
-        public static float refreshSessionTimer = 0;
-        public static float refreshSessionExpiryTime = 3600;
-        public static float volumeTimer = 0;
-        public static float jukeboxActionTimer = 0;
-        public static float currentPosition = 0;
-
-        public static void reset()
-        {
-            _server = null;
-            volumeThrottler = new ThrottleDispatcher(333);
-            repeatTrack = false;
-            justStarted = false;
-            startingPosition = 0;
-            client = null;
-            playingOnStartup = false;
-            newJukeboxInstance = false;
-            jukeboxIsRunning = false;
-            manualPause = false;
-            manualPlay = false;
-            jukeboxIsPaused = false;
-            menuPause = false;
-            distancePause = false;
-            wasPlayingBeforeMenuPause = false;
-            jukeboxNeedsUpdating = false;
-            currentTrackTitle = "Spotify Jukebox Mod";
-            currentTrackLength = 0;
-            timeTrackStarted = 0;
-            playPauseTimeout = 0;
-            spotifyVolume = 100;
-            jukeboxVolume = Jukebox.volume;
-            resetJukebox = false;
-            spotifyShuffleState = false;
-            noTrack = false;
-            beyondFiveMins = false;
-            positionDrag = false;
-            currentInstance = null;
-            volumeModifier = 1;
-            stopCounter = 0;
-            getTrackTimer = 0;
-            refreshSessionTimer = 0;
-            refreshSessionExpiryTime = 3600;
-            volumeTimer = 0;
-            jukeboxActionTimer = 0;
-            currentPosition = 0;
-        }
-
         public async static Task SpotifyLogin()
         {
             try
@@ -96,7 +17,7 @@ namespace JukeboxSpotify
                 // Check the config for the clientId and clientSecret
                 if (null == MainPatcher.Config.clientId || null == MainPatcher.Config.clientSecret || "paste_client_id_here" == MainPatcher.Config.clientId || "paste_client_secret_here" == MainPatcher.Config.clientSecret)
                 {
-                    currentTrackTitle = "Follow instructions on the Nexus mod page to add your Spotify client id and secret to your config.json file, then reload your save.";
+                    Vars.currentTrackTitle = "Follow instructions on the Nexus mod page to add your Spotify client id and secret to your config.json file, then reload your save.";
                     MainPatcher.Config.clientId = "paste_client_id_here";
                     MainPatcher.Config.clientSecret = "paste_client_secret_here";
                     MainPatcher.Config.Save();
@@ -104,7 +25,7 @@ namespace JukeboxSpotify
                     return;
                 }
 
-                justStarted = true;
+                Vars.justStarted = true;
 
                 // Check the config for a stored refresh token
                 if (null != MainPatcher.Config.refreshToken)
@@ -125,7 +46,7 @@ namespace JukeboxSpotify
                 }
 
                 // This while loop is to give time for the client object to be fully initialised.
-                while (null == client)
+                while (null == Vars.client)
                 {
                     await Task.Delay(1000);
                 }
@@ -148,7 +69,7 @@ namespace JukeboxSpotify
             {
                 // Get an available device to play tracks with.
                 Device availableDevice = null;
-                DeviceResponse devices = await client.Player.GetAvailableDevices();
+                DeviceResponse devices = await Vars.client.Player.GetAvailableDevices();
                 bool foundActiveDevice = false;
 
                 //new Log("devices count: " + devices.Devices.Count, null);
@@ -185,7 +106,7 @@ namespace JukeboxSpotify
                 else if (null == availableDevice)
                 {
                     new Log("No Spotify device found. Please play/pause your Spotify app.");
-                    currentTrackTitle = "No Spotify device found. Please play/pause your Spotify app then try again.";
+                    Vars.currentTrackTitle = "No Spotify device found. Please play/pause your Spotify app then try again.";
                     return;
                 }
             }
@@ -200,15 +121,15 @@ namespace JukeboxSpotify
         {
             try
             {
-                var currentlyPlaying = await client.Player.GetCurrentPlayback();
+                var currentlyPlaying = await Vars.client.Player.GetCurrentPlayback();
 
                 if (null == currentlyPlaying || null == currentlyPlaying.Item)
                 {
-                    noTrack = true;
+                    Vars.noTrack = true;
                     if (MainPatcher.Config.deviceId == null) await GetDevice();
-                    await client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { MainPatcher.Config.deviceId }));
+                    await Vars.client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { MainPatcher.Config.deviceId }));
                     new Error("Playback not found");
-                    currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
+                    Vars.currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
                     return;
                 }
 
@@ -216,26 +137,26 @@ namespace JukeboxSpotify
 
                 if (uGUI_SceneLoadingPatcher.loadingDone && null != Jukebox.main._instance)
                 {
-                    spotifyShuffleState = currentlyPlaying.ShuffleState;
+                    Vars.spotifyShuffleState = currentlyPlaying.ShuffleState;
                     if (Jukebox.shuffle != currentlyPlaying.ShuffleState) Jukebox.main._instance.OnButtonShuffle();
                 }
 
-                if (justStarted) playingOnStartup = currentlyPlaying.IsPlaying;
+                if (Vars.justStarted) Vars.playingOnStartup = currentlyPlaying.IsPlaying;
 
-                string oldTrackTitle = currentTrackTitle;
-                startingPosition = (uint)currentlyPlaying.ProgressMs;
-                currentTrackLength = (uint)currentTrack.DurationMs;
-                noTrack = false;
+                string oldTrackTitle = Vars.currentTrackTitle;
+                Vars.startingPosition = (uint)currentlyPlaying.ProgressMs;
+                Vars.currentTrackLength = (uint)currentTrack.DurationMs;
+                Vars.noTrack = false;
 
                 // Make sure no jukebox actions have taken place in the last second before setting any kind of manual spotify state.
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
-                if ((Time.time > jukeboxActionTimer + 1) && !menuPause && currentlyPlaying.IsPlaying && (!jukeboxIsRunning || jukeboxIsPaused))
+                if ((Time.time > Vars.jukeboxActionTimer + 1) && !Vars.menuPause && currentlyPlaying.IsPlaying && (!Vars.jukeboxIsRunning || Vars.jukeboxIsPaused))
                 {
-                    manualPlay = true;
+                    Vars.manualPlay = true;
                 }
-                else if ((Time.time > jukeboxActionTimer + 1) && !menuPause && !justStarted && !currentlyPlaying.IsPlaying && jukeboxIsRunning && !jukeboxIsPaused)
+                else if ((Time.time > Vars.jukeboxActionTimer + 1) && !Vars.menuPause && !Vars.justStarted && !currentlyPlaying.IsPlaying && Vars.jukeboxIsRunning && !Vars.jukeboxIsPaused)
                 {
-                    manualPause = true;
+                    Vars.manualPause = true;
                 }
 
                 if (MainPatcher.Config.includeArtist)
@@ -245,26 +166,28 @@ namespace JukeboxSpotify
                     {
                         artists += (artists == "") ? artist.Name : ", " + artist.Name;
                     }
-                    currentTrackTitle = (MainPatcher.Config.includeArtist) ? currentTrack.Name + " - " + artists : currentTrack.Name;
+
+                    Vars.currentTrackTitle = (MainPatcher.Config.includeArtist) ? currentTrack.Name + " - " + artists : currentTrack.Name;
                 }
                 else
                 {
-                    currentTrackTitle = currentTrack.Name;
+                    Vars.currentTrackTitle = currentTrack.Name;
                 }
 
                 if (
                     uGUI_SceneLoadingPatcher.loadingDone && 
                     (
-                        playingOnStartup || (!menuPause && jukeboxIsRunning) || 
-                        oldTrackTitle != currentTrackTitle || 
-                        (manualPlay && (jukeboxIsPaused || !jukeboxIsRunning))
+Vars.playingOnStartup || (!Vars.menuPause && Vars.jukeboxIsRunning) || 
+                        oldTrackTitle != Vars.currentTrackTitle || 
+                        (Vars.manualPlay && (Vars.jukeboxIsPaused || !Vars.jukeboxIsRunning))
                     )
-                ) jukeboxNeedsUpdating = true;
+                )
+                    Vars.jukeboxNeedsUpdating = true;
             }
             catch (Exception e)
             {
                 new Error("Something went wrong getting track info", e);
-                currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
+                Vars.currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
                 if (MainPatcher.Config.deviceId == null) await GetDevice();
                 if (e.Message == "The access token expired")
                 {
@@ -278,13 +201,13 @@ namespace JukeboxSpotify
         {
             try
             {
-                _server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
-                await _server.Start();
+                Vars._server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
+                await Vars._server.Start();
+                Vars.
+                                _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+                Vars._server.ErrorReceived += OnErrorReceived;
 
-                _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
-                _server.ErrorReceived += OnErrorReceived;
-
-                var request = new LoginRequest(_server.BaseUri, MainPatcher.Config.clientId, LoginRequest.ResponseType.Code)
+                var request = new LoginRequest(Vars._server.BaseUri, MainPatcher.Config.clientId, LoginRequest.ResponseType.Code)
                 {
                     Scope = new[] { Scopes.UserModifyPlaybackState, Scopes.UserReadPlaybackState }
                 };
@@ -300,7 +223,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                await _server.Stop();
+                await Vars._server.Stop();
                 await SetupSpotifyClient(response.Code, true);
             }
             catch (Exception e)
@@ -330,8 +253,8 @@ namespace JukeboxSpotify
                 config = SpotifyClientConfig
                     .CreateDefault()
                     .WithAuthenticator(new AuthorizationCodeAuthenticator(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, tokenResponse));
-
-                client = new SpotifyClient(config);
+                Vars.
+                                client = new SpotifyClient(config);
             }
             catch (Exception e)
             {
@@ -344,7 +267,7 @@ namespace JukeboxSpotify
             try
             {
                 new Error("Server failed: " + error);
-                await _server.Stop();
+                await Vars._server.Stop();
             }
             catch (Exception e)
             {
@@ -359,11 +282,11 @@ namespace JukeboxSpotify
                 var newResponse = await new OAuthClient().RequestToken(
                   new AuthorizationCodeRefreshRequest(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, MainPatcher.Config.refreshToken)
                 );
-
-                client = new SpotifyClient(newResponse.AccessToken);
-                if (!justStarted) new Log("Refreshed the Spotify session.");
-                refreshSessionExpiryTime = newResponse.ExpiresIn;
-                refreshSessionTimer = Time.time;
+                Vars.
+                                client = new SpotifyClient(newResponse.AccessToken);
+                if (!Vars.justStarted) new Log("Refreshed the Spotify session.");
+                Vars.refreshSessionExpiryTime = newResponse.ExpiresIn;
+                Vars.refreshSessionTimer = Time.time;
             }
             catch (Exception e)
             {

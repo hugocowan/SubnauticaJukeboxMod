@@ -14,10 +14,10 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || (!__instance.ConsumePower() && !Spotify.justStarted)) return true;
-                if (Spotify.beyondFiveMins && !Spotify.newJukeboxInstance) return false;
-                if (Spotify.newJukeboxInstance) Spotify.newJukeboxInstance = false;
-                text = Spotify.currentTrackTitle;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || (!__instance.ConsumePower() && !Vars.justStarted)) return true;
+                if (Vars.beyondFiveMins && !Vars.newJukeboxInstance) return false;
+                if (Vars.newJukeboxInstance) Vars.newJukeboxInstance = false;
+                text = Vars.currentTrackTitle;
             }
             catch (Exception e)
             {
@@ -33,8 +33,8 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
-                length = Spotify.currentTrackLength;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+                length = Vars.currentTrackLength;
             }
             catch (Exception e)
             {
@@ -49,8 +49,8 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return;
-                if (Spotify.justStarted && (Spotify.playingOnStartup || Spotify.manualPlay) && null != __instance)
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+                if (Vars.justStarted && (Vars.playingOnStartup || Vars.manualPlay) && null != __instance)
                 {
                     new Log("Starting jukebox as Spotify is already playing. Playing closest Jukebox.");
 
@@ -73,7 +73,7 @@ namespace JukeboxSpotify
                     }
 
                     Jukebox.Play(closestJukeboxInstance);
-                    Spotify.justStarted = false;
+                    Vars.justStarted = false;
                 }
             }
             catch (Exception e)
@@ -88,13 +88,12 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client || !IsPowered(__instance)) return;
 
                 int volumePercentage = (int) (__instance.volume * 100);
-
-                Spotify.spotifyVolume = volumePercentage;
-                Spotify.jukeboxVolume = __instance.volume;
-                Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
+                Vars.spotifyVolume = volumePercentage;
+                Vars.jukeboxVolume = __instance.volume;
+                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
                 Jukebox.volume = 0;
             }
             catch (Exception e)
@@ -107,9 +106,9 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.UpdatePositionSlider))]
         public static void UpdatePositionSliderPrefix(JukeboxInstance __instance)
         {
-            float trackPosition = (Spotify.currentPosition * 1000) / (float)Spotify.currentTrackLength; // _position is a percentage
+            float trackPosition = (Vars.currentPosition * 1000) / (float)Vars.currentTrackLength; // _position is a percentage
 
-            if (Spotify.beyondFiveMins && !Spotify.positionDrag)
+            if (Vars.beyondFiveMins && !Vars.positionDrag)
             {
                 __instance._position = trackPosition;
             }
@@ -121,9 +120,9 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return true;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return true;
                 if (!IsPowered(__instance)) return false;
-                if (__instance.shuffle == Spotify.spotifyShuffleState) Spotify.client.Player.SetShuffle(new PlayerShuffleRequest(!__instance.shuffle));
+                if (__instance.shuffle == Vars.spotifyShuffleState) Vars.client.Player.SetShuffle(new PlayerShuffleRequest(!__instance.shuffle));
             }
             catch (Exception e)
             {
@@ -139,7 +138,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return true;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return true;
                 if (!IsPowered(__instance)) return false;
                 new Log("Repeat button pressed");
 
@@ -148,20 +147,19 @@ namespace JukeboxSpotify
                 switch (__instance.repeat.ToString())
                 {
                     case "Track":
-                        Spotify.repeatTrack = true;
+                        Vars.repeatTrack = true;
                         state = PlayerSetRepeatRequest.State.Track;
                         break;
                     case "All":
-                        Spotify.repeatTrack = false;
+                        Vars.repeatTrack = false;
                         state = PlayerSetRepeatRequest.State.Off;
                         break;
                     default:
-                        Spotify.repeatTrack = false;
+                        Vars.repeatTrack = false;
                         state = PlayerSetRepeatRequest.State.Context;
                         break;
                 }
-
-                Spotify.client.Player.SetRepeat(new PlayerSetRepeatRequest(state));
+                Vars.client.Player.SetRepeat(new PlayerSetRepeatRequest(state));
             }
             catch (Exception e)
             {
@@ -176,7 +174,7 @@ namespace JukeboxSpotify
         public static bool OnButtonPreviousPrefix(ref JukeboxInstance __instance)
         {
             if (!IsPowered(__instance)) return false;
-            Spotify.jukeboxActionTimer = Time.time;
+            Vars.jukeboxActionTimer = Time.time;
             return true;
         }
 
@@ -185,7 +183,7 @@ namespace JukeboxSpotify
         public static bool OnButtonNextPrefix(ref JukeboxInstance __instance)
         {
             if (!IsPowered(__instance)) return false;
-            Spotify.jukeboxActionTimer = Time.time;
+            Vars.jukeboxActionTimer = Time.time;
             return true;
         }
 
@@ -195,28 +193,27 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client || !IsPowered(__instance)) return;
 
                 new Log("Stop track");
-                Spotify.jukeboxIsPaused = false;
-                Spotify.manualPause = true; 
-                Spotify.manualPlay = false;
-                Spotify.jukeboxIsRunning = false;
-                Spotify.startingPosition = 0;
-                Spotify.jukeboxActionTimer = Time.time;
-
-                Spotify.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
-                Spotify.volumeThrottler.Throttle(() => Spotify.client.Player.SetVolume(new PlayerVolumeRequest(100)));
-                if (Spotify.stopCounter >= 1 || !MainPatcher.Config.stopTwiceForStart)
+                Vars.jukeboxIsPaused = false;
+                Vars.manualPause = true;
+                Vars.manualPlay = false;
+                Vars.jukeboxIsRunning = false;
+                Vars.startingPosition = 0;
+                Vars.jukeboxActionTimer = Time.time;
+                Vars.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
+                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(100)));
+                if (Vars.stopCounter >= 1 || !MainPatcher.Config.stopTwiceForStart)
                 {
                     new Log("Setting track to the start");
-                    Spotify.stopCounter = 0;
-                    Spotify.timeTrackStarted = Time.time;
-                    Spotify.client.Player.SeekTo(new PlayerSeekToRequest(0));
+                    Vars.stopCounter = 0;
+                    Vars.timeTrackStarted = Time.time;
+                    Vars.client.Player.SeekTo(new PlayerSeekToRequest(0));
                 }
                 else
                 {
-                    Spotify.stopCounter++;
+                    Vars.stopCounter++;
                 }
                 
             }
@@ -230,7 +227,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(JukeboxInstance.OnPositionBeginDrag))]
         public static void OnPositionBeginDragPrefix()
         {
-            Spotify.positionDrag = true;
+            Vars.positionDrag = true;
         }
 
         [HarmonyPostfix]
@@ -239,23 +236,22 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client || !IsPowered(__instance)) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client || !IsPowered(__instance)) return;
 
-                if (Spotify.jukeboxIsRunning || Spotify.jukeboxIsPaused)
+                if (Vars.jukeboxIsRunning || Vars.jukeboxIsPaused)
                 {
-                    long trackPosition = (long) (Spotify.currentTrackLength * __instance._position); // _position is a percentage
-                    Spotify.beyondFiveMins = (trackPosition / 1000) >= 300;
+                    long trackPosition = (long) (Vars.currentTrackLength * __instance._position); // _position is a percentage
+                    Vars.beyondFiveMins = (trackPosition / 1000) >= 300;
                     new Log("End drag occured");
-                    Spotify.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = MainPatcher.Config.deviceId });
-                    Spotify.timeTrackStarted = Time.time - trackPosition / 1000;
+                    Vars.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = MainPatcher.Config.deviceId });
+                    Vars.timeTrackStarted = Time.time - trackPosition / 1000;
                 }
             }
             catch (Exception e)
             {
                 new Error("Something went wrong with stopping the track", e);
             }
-
-            Spotify.positionDrag = false;
+            Vars.positionDrag = false;
         }
 
         [HarmonyPrefix]
@@ -265,42 +261,41 @@ namespace JukeboxSpotify
             new Log("Playpause triggered");
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Spotify.noTrack || null == Spotify.client) return true;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return true;
 
                 // This is to stop the method getting called very quickly after the first one.
-                if (Spotify.playPauseTimeout + 0.5 > Time.time)
+                if (Vars.playPauseTimeout + 0.5 > Time.time)
                 {
                     return false;
                 }
 
                 if (!IsPowered(__instance)) return false;
+                Vars.manualPause = false;
+                Vars.manualPlay = false;
+                Vars.playPauseTimeout = Time.time;
+                Vars.stopCounter = 0;
+                Vars.volumeTimer = 0;
+                Vars.jukeboxVolume = __instance.volume;
+                Vars.jukeboxActionTimer = Time.time;
 
-                Spotify.manualPause = false;
-                Spotify.manualPlay = false;
-                Spotify.playPauseTimeout = Time.time;
-                Spotify.stopCounter = 0;
-                Spotify.volumeTimer = 0;
-                Spotify.jukeboxVolume = __instance.volume;
-                Spotify.jukeboxActionTimer = Time.time;
-
-                if (__instance != Spotify.currentInstance)
+                if (__instance != Vars.currentInstance)
                 {
-                    if (null != Spotify.currentInstance)
+                    if (null != Vars.currentInstance)
                     {
                         new Log("New JukeboxInstance does not match previous JukeboxInstance");
-                        Spotify.newJukeboxInstance = true;
+                        Vars.newJukeboxInstance = true;
                     }
-                    __instance._file = Spotify.defaultTrack;
-                    Spotify.currentInstance = __instance;
-                    Spotify.manualPlay = true;
+                    __instance._file = Vars.defaultTrack;
+                    Vars.currentInstance = __instance;
+                    Vars.manualPlay = true;
                 }
-                else if (!Spotify.jukeboxIsPaused)
+                else if (!Vars.jukeboxIsPaused)
                 {
-                    Spotify.manualPause = true;
+                    Vars.manualPause = true;
                 }
                 else
                 {
-                    Spotify.manualPlay = true;
+                    Vars.manualPlay = true;
                 }
 
                 // This is needed for the first time we press play on an inactive jukebox.
@@ -322,7 +317,6 @@ namespace JukeboxSpotify
 
         private static bool IsPowered(JukeboxInstance __instance)
         {
-
             if (!__instance.ConsumePower())
             {
                 __instance.SetLabel("Unpowered");
