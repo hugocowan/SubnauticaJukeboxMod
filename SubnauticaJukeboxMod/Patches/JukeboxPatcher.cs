@@ -165,7 +165,6 @@ namespace JukeboxSpotify
                 if (Spotify.justStarted && Spotify.jukeboxIsRunning) Spotify.justStarted = false;
 
                 bool soundPositionNotOrigin = __instance.soundPosition.x != 0 && __instance.soundPosition.y != 0 && __instance.soundPosition.z != 0;
-                bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>(); // Check whether the jukebox is in a SeaTruck.
                 bool isPowered = __instance._instance.ConsumePower();
 
                 // Check if we need to pause/resume the jukebox.
@@ -197,7 +196,7 @@ namespace JukeboxSpotify
                     Resume(__instance);
                 }
 
-                UpdateVolume(__instance, isPowered, soundPositionNotOrigin, seaTruckJukeboxPlaying);
+                UpdateVolume(__instance, isPowered, soundPositionNotOrigin);
 
             } catch(Exception e)
             {
@@ -288,7 +287,7 @@ namespace JukeboxSpotify
             Spotify.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
         }
 
-        private static void UpdateVolume(Jukebox __instance, bool isPowered, bool soundPositionNotOrigin, bool seaTruckJukeboxPlaying)
+        private static void UpdateVolume(Jukebox __instance, bool isPowered, bool soundPositionNotOrigin)
         {
             if (isPowered && soundPositionNotOrigin && __instance._audible)
             {
@@ -296,6 +295,7 @@ namespace JukeboxSpotify
                 Vector3 playerPosition = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
                 float sqrMagnitude = (__instance.soundPosition - playerPosition).sqrMagnitude;
                 int volumePercentage = (int)((Spotify.jukeboxVolume - sqrMagnitude / 400) * 100) + 1;
+                bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>(); // Check whether the jukebox is in a SeaTruck.
 
                 // If the player is underwater, or if the seatruck jukebox is playing but the player is not in the seatruck, or if a base's jukebox is playing but they aren't in the base,
                 // halve the music volume as there is a body of water between the jukebox and the player.
