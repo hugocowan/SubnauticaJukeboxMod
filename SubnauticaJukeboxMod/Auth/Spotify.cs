@@ -203,8 +203,7 @@ Vars.playingOnStartup || (!Vars.menuPause && Vars.jukeboxIsRunning) ||
             {
                 Vars._server = new EmbedIOAuthServer(new Uri("http://localhost:5000/callback"), 5000);
                 await Vars._server.Start();
-                Vars.
-                                _server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
+                Vars._server.AuthorizationCodeReceived += OnAuthorizationCodeReceived;
                 Vars._server.ErrorReceived += OnErrorReceived;
 
                 var request = new LoginRequest(Vars._server.BaseUri, MainPatcher.Config.clientId, LoginRequest.ResponseType.Code)
@@ -253,8 +252,7 @@ Vars.playingOnStartup || (!Vars.menuPause && Vars.jukeboxIsRunning) ||
                 config = SpotifyClientConfig
                     .CreateDefault()
                     .WithAuthenticator(new AuthorizationCodeAuthenticator(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, tokenResponse));
-                Vars.
-                                client = new SpotifyClient(config);
+                Vars.client = new SpotifyClient(config);
             }
             catch (Exception e)
             {
@@ -282,8 +280,7 @@ Vars.playingOnStartup || (!Vars.menuPause && Vars.jukeboxIsRunning) ||
                 var newResponse = await new OAuthClient().RequestToken(
                   new AuthorizationCodeRefreshRequest(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, MainPatcher.Config.refreshToken)
                 );
-                Vars.
-                                client = new SpotifyClient(newResponse.AccessToken);
+                Vars.client = new SpotifyClient(newResponse.AccessToken);
                 if (!Vars.justStarted) new Log("Refreshed the Spotify session.");
                 Vars.refreshSessionExpiryTime = newResponse.ExpiresIn;
                 Vars.refreshSessionTimer = Time.time;
