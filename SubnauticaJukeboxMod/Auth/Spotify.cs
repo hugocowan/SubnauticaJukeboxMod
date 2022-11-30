@@ -177,7 +177,7 @@ namespace JukeboxSpotify
                 if (
                     uGUI_SceneLoadingPatcher.loadingDone && 
                     (
-Vars.playingOnStartup || (!Vars.menuPause && Vars.jukeboxIsRunning) || 
+                        Vars.playingOnStartup || (!Vars.menuPause && Vars.jukeboxIsRunning) || 
                         oldTrackTitle != Vars.currentTrackTitle || 
                         (Vars.manualPlay && (Vars.jukeboxIsPaused || !Vars.jukeboxIsRunning))
                     )

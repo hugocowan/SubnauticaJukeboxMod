@@ -171,7 +171,7 @@ namespace JukeboxSpotify
                     (!__instance._paused || !Vars.jukeboxIsPaused) &&
                     (
                         !isPowered ||
-Vars.manualPause || Vars.menuPause ||
+                        Vars.manualPause || Vars.menuPause ||
                         (!__instance._audible && soundPositionNotOrigin && MainPatcher.Config.pauseOnLeave)
                     )
                 )
@@ -185,7 +185,7 @@ Vars.manualPause || Vars.menuPause ||
                     !Vars.manualPause && !Vars.menuPause &&
                     (
                         (__instance._audible && soundPositionNotOrigin && MainPatcher.Config.pauseOnLeave && Vars.distancePause) ||
-Vars.wasPlayingBeforeMenuPause ||
+                        Vars.wasPlayingBeforeMenuPause ||
                         (__instance._audible && Vars.manualPlay)
                     )
                 )
