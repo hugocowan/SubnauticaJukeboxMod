@@ -14,37 +14,37 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.spotify) return;
 
                 if (Vars.repeatTrack)
                 {
-                    await Vars.client.Player.SeekTo(new PlayerSeekToRequest(0));
+                    await Vars.spotify.Player.SeekTo(new PlayerSeekToRequest(0));
                     Vars.timeTrackStarted = Time.time;
                     Vars.startingPosition = 0;
                     return;
                 }
 
-                await Vars.client.Player.SetVolume(new PlayerVolumeRequest(0));
+                await Vars.spotify.Player.SetVolume(new PlayerVolumeRequest(0));
 
                 if (forward)
                 {
                     new Log("Skip next track");
-                    await Vars.client.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = MainPatcher.Config.deviceId });
+                    await Vars.spotify.Player.SkipNext();
                 }
                 else
                 {
                     new Log("Skip previous track");
-                    await Vars.client.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = MainPatcher.Config.deviceId });
+                    await Vars.spotify.Player.SkipPrevious();
                 }
 
                 if (!Vars.jukeboxIsRunning)
                 {
-                    await Vars.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
+                    await Vars.spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 }
                 Vars.timeTrackStarted = Time.time;
                 Vars.startingPosition = 1000;
                 Vars.manualPause = false;
-                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(Vars.spotifyVolume)));
+                Vars.volumeThrottler.Throttle(() => Vars.spotify.Player.SetVolume(new PlayerVolumeRequest(Vars.spotifyVolume)));
             }
             catch (Exception e)
             {
@@ -54,21 +54,20 @@ namespace JukeboxSpotify
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Jukebox.OnApplicationQuit))]
-        public static void OnApplicationQuitPrefix()
+        public async static void OnApplicationQuitPrefix()
         {
             try
             {
                 new Log("Application Quit");
                 uGUI_SceneLoadingPatcher.loadingDone = false;
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.spotify) return;
                 Vars.volumeThrottler.Throttle(() => { }); // Clear the throttler
                 if (!Vars.playingOnStartup)
                 {
-                    var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId };
-                    Vars.client.Player.PausePlayback(playbackRequest);
+                    await Vars.spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                     Vars.jukeboxIsRunning = false;
                 }
-                Vars.client.Player.SetVolume(new PlayerVolumeRequest(100));
+                await Vars.spotify.Player.SetVolume(new PlayerVolumeRequest(100));
             }
             catch (Exception e)
             {
@@ -78,11 +77,11 @@ namespace JukeboxSpotify
 
         [HarmonyPrefix]
         [HarmonyPatch(nameof(Jukebox.Play))]
-        public static void PlayPrefix(Jukebox __instance)
+        public async static void PlayPrefix()
         {
             try
             {
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || null == Vars.client) return;
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || null == Vars.spotify) return;
 
                 new Log("Play track");
                 Jukebox.volume = 0;
@@ -94,7 +93,7 @@ namespace JukeboxSpotify
 
                 try
                 {
-                    Vars.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
+                    await Vars.spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
                 }
                 catch (Exception e)
                 {
@@ -113,7 +112,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(Jukebox.HandleOpenError))]
         public static void HandleOpenErrorPostfix(Jukebox __instance)
         {
-            if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+            if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.spotify) return;
             new Log("We have an open error D: this._failed: " + __instance._failed);
         }
 
@@ -121,7 +120,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(Jukebox.UpdateLowLevel))]
         public static void UpdateLowLevelPrefix(Jukebox __instance)
         {
-            if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+            if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.spotify) return;
             __instance._file = Vars.defaultTrack; // This avoids errors and generally makes the jukebox very, Very happy.
         }
 
@@ -131,12 +130,12 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (MainPatcher.Config.enableModToggle && null != Vars.client)
+                if (MainPatcher.Config.enableModToggle && null != Vars.spotify)
                 {
                     KeepAlive();
                 }
 
-                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client || !uGUI_SceneLoadingPatcher.loadingDone)
+                if (!MainPatcher.Config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.spotify || !uGUI_SceneLoadingPatcher.loadingDone)
                 {
                     // If the mod has been disabled, make sure the jukebox is reset.
                     if (Vars.resetJukebox) ResetJukebox(__instance);
@@ -237,11 +236,11 @@ namespace JukeboxSpotify
             }
         }
 
-        private static void Pause(Jukebox __instance, bool isPowered)
+        private async static void Pause(Jukebox __instance, bool isPowered)
         {
             if (Vars.spotifyVolume != 0 && (!isPowered || !__instance._audible))
             {
-                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(0)));
+                Vars.volumeThrottler.Throttle(() => Vars.spotify.Player.SetVolume(new PlayerVolumeRequest(0)));
                 Vars.spotifyVolume = 0;
             }
 
@@ -258,10 +257,10 @@ namespace JukeboxSpotify
             Vars.jukeboxIsPaused = true;
             Vars.jukeboxActionTimer = Time.time;
             Vars.manualPause = false;
-            Vars.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
+            await Vars.spotify.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
         }
 
-        private static void Resume(Jukebox __instance)
+        private async static void Resume(Jukebox __instance)
         {
             if (Vars.manualPlay && __instance._instance.canvas.enabled)
             {
@@ -276,7 +275,7 @@ namespace JukeboxSpotify
             Vars.manualPlay = false;
             Vars.jukeboxActionTimer = Time.time;
             Vars.distancePause = false;
-            Vars.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
+            await Vars.spotify.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = MainPatcher.Config.deviceId });
         }
 
         private static void UpdateVolume(Jukebox __instance, bool isPowered, bool soundPositionNotOrigin)
@@ -309,7 +308,7 @@ namespace JukeboxSpotify
 
                 if (volumePercentage < 0) volumePercentage = 0;
                 if (volumePercentage > 100) volumePercentage = 100;
-                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
+                Vars.volumeThrottler.Throttle(() => Vars.spotify.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
                 Vars.spotifyVolume = volumePercentage;
             }
         }

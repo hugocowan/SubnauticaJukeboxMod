@@ -12,6 +12,7 @@ namespace JukeboxSpotify
     {
         public async static Task SpotifyLogin()
         {
+            new Log("we are here woop");
             try
             {
                 // Check the config for the clientId and clientSecret
@@ -42,11 +43,12 @@ namespace JukeboxSpotify
                 } // If there wasn't a refresh token, we need to get one
                 else
                 {
+                    new Log("No refresh token, let's get credentials");
                     await RunServer();
                 }
 
                 // This while loop is to give time for the client object to be fully initialised.
-                while (null == Vars.client)
+                while (null == Vars.spotify)
                 {
                     await Task.Delay(1000);
                 }
@@ -69,10 +71,10 @@ namespace JukeboxSpotify
             {
                 // Get an available device to play tracks with.
                 Device availableDevice = null;
-                DeviceResponse devices = await Vars.client.Player.GetAvailableDevices();
+                DeviceResponse devices = await Vars.spotify.Player.GetAvailableDevices();
                 bool foundActiveDevice = false;
 
-                //new Log("devices count: " + devices.Devices.Count, null);
+                new Log("devices count: " + devices.Devices.Count);
 
                 if (null != MainPatcher.Config.deviceId)
                 {
@@ -83,6 +85,7 @@ namespace JukeboxSpotify
                 devices.Devices.ForEach(delegate (Device device)
                 {
                     // Find the first active device.
+                    new Log("device: " + device.Id);
                     if (
                         false == foundActiveDevice && device.IsActive &&
                         (null == availableDevice || (null != availableDevice && availableDevice.Id != device.Id))
@@ -121,19 +124,19 @@ namespace JukeboxSpotify
         {
             try
             {
-                var currentlyPlaying = await Vars.client.Player.GetCurrentPlayback();
+                var currentlyPlaying = await Vars.spotify.Player.GetCurrentPlayback();
 
                 if (null == currentlyPlaying || null == currentlyPlaying.Item)
                 {
                     Vars.noTrack = true;
                     if (MainPatcher.Config.deviceId == null) await GetDevice();
-                    await Vars.client.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { MainPatcher.Config.deviceId }));
+                    await Vars.spotify.Player.TransferPlayback(new PlayerTransferPlaybackRequest(new List<string>() { MainPatcher.Config.deviceId }));
                     new Error("Playback not found");
                     Vars.currentTrackTitle = "Spotify Jukebox Mod - If nothing plays, play/pause your Spotify app then try again.";
                     return;
                 }
 
-                var currentTrack = (FullTrack)currentlyPlaying.Item;
+                var currentTrack = (FullTrack) currentlyPlaying.Item;
 
                 if (uGUI_SceneLoadingPatcher.loadingDone && null != Jukebox.main._instance)
                 {
@@ -148,13 +151,13 @@ namespace JukeboxSpotify
                 Vars.currentTrackLength = (uint)currentTrack.DurationMs;
                 Vars.noTrack = false;
 
-                // Make sure no jukebox actions have taken place in the last second before setting any kind of manual spotify state.
+                // Make sure no jukebox actions have taken place in the last 5 seconds before setting any kind of manual spotify state.
                 // This prevents situations where the playstate has been changed (e.g. paused) but GetTrackInfo still thinks Spotify is in the old playstate (e.g. playing).
-                if ((Time.time > Vars.jukeboxActionTimer + 1) && !Vars.menuPause && currentlyPlaying.IsPlaying && (!Vars.jukeboxIsRunning || Vars.jukeboxIsPaused))
+                if ((Time.time > Vars.jukeboxActionTimer + 5) && !Vars.menuPause && currentlyPlaying.IsPlaying && (!Vars.jukeboxIsRunning || Vars.jukeboxIsPaused))
                 {
                     Vars.manualPlay = true;
                 }
-                else if ((Time.time > Vars.jukeboxActionTimer + 1) && !Vars.menuPause && !Vars.justStarted && !currentlyPlaying.IsPlaying && Vars.jukeboxIsRunning && !Vars.jukeboxIsPaused)
+                else if ((Time.time > Vars.jukeboxActionTimer + 5) && !Vars.menuPause && !Vars.justStarted && !currentlyPlaying.IsPlaying && Vars.jukeboxIsRunning && !Vars.jukeboxIsPaused)
                 {
                     Vars.manualPause = true;
                 }
@@ -218,59 +221,26 @@ namespace JukeboxSpotify
             }
         }
 
-        private async static Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
+        private static async Task OnAuthorizationCodeReceived(object sender, AuthorizationCodeResponse response)
         {
-            try
-            {
-                await Vars._server.Stop();
-                await SetupSpotifyClient(response.Code, true);
-            }
-            catch (Exception e)
-            {
-                new Error("Something went wrong receiving the Authorization code", e);
-            }
-        }
+            await Vars._server.Stop();
 
-        private async static Task SetupSpotifyClient(string code, bool saveToConfig = false)
-        {
-            try
-            {
-                // Get the access token and set up the SpotifyClient.
-                SpotifyClientConfig config = SpotifyClientConfig.CreateDefault();
-                var tokenResponse = await new OAuthClient(config).RequestToken(
-                  new AuthorizationCodeTokenRequest(
-                    MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, code, new Uri("http://localhost:5000/callback")
-                  )
-                );
+            var config = SpotifyClientConfig.CreateDefault();
+            var tokenResponse = await new OAuthClient(config).RequestToken(
+              new AuthorizationCodeTokenRequest(
+                MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, response.Code, new Uri("http://localhost:5000/callback")
+              )
+            );
 
-                if (saveToConfig)
-                {
-                    MainPatcher.Config.refreshToken = tokenResponse.RefreshToken;
-                    MainPatcher.Config.Save();
-                }
-
-                config = SpotifyClientConfig
-                    .CreateDefault()
-                    .WithAuthenticator(new AuthorizationCodeAuthenticator(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, tokenResponse));
-                Vars.client = new SpotifyClient(config);
-            }
-            catch (Exception e)
-            {
-                new Error("Something went wrong setting up the Spotify client", e);
-            }
+            Vars.spotify = new SpotifyClient(tokenResponse.AccessToken);
+            MainPatcher.Config.refreshToken = tokenResponse.RefreshToken;
+            MainPatcher.Config.Save();
         }
 
         private static async Task OnErrorReceived(object sender, string error, string state)
         {
-            try
-            {
-                new Error("Server failed: " + error);
-                await Vars._server.Stop();
-            }
-            catch (Exception e)
-            {
-                new Error("Something went wrong while stopping the server after an error", e);
-            }
+            Console.WriteLine($"Aborting authorization, error received: {error}");
+            await Vars._server.Stop();
         }
 
         public async static Task RefreshSession()
@@ -278,12 +248,23 @@ namespace JukeboxSpotify
             try
             {
                 var newResponse = await new OAuthClient().RequestToken(
-                  new AuthorizationCodeRefreshRequest(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, MainPatcher.Config.refreshToken)
-                );
-                Vars.client = new SpotifyClient(newResponse.AccessToken);
+                 new AuthorizationCodeRefreshRequest(MainPatcher.Config.clientId, MainPatcher.Config.clientSecret, MainPatcher.Config.refreshToken)
+               );
+                new Log("AccessToken: " + newResponse.AccessToken);
+                new Log("TokenType: " + newResponse.TokenType);
+                new Log("RefreshToken: " + newResponse.RefreshToken);
+
+                if (string.IsNullOrEmpty(newResponse.RefreshToken))
+                {
+                    new Log("RefreshToken is empty D:");
+                }
+
+                Vars.spotify = new SpotifyClient(newResponse.AccessToken);
                 if (!Vars.justStarted) new Log("Refreshed the Spotify session.");
                 Vars.refreshSessionExpiryTime = newResponse.ExpiresIn;
                 Vars.refreshSessionTimer = Time.time;
+                MainPatcher.Config.refreshToken = newResponse.RefreshToken;
+                MainPatcher.Config.Save();
             }
             catch (Exception e)
             {
