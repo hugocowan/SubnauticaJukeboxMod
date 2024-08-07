@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.35122.118
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JukeboxSpotify", "JukeboxSpotify.csproj", "{778595E2-DAC3-42BC-95C5-7FC8E87A5664}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{778595E2-DAC3-42BC-95C5-7FC8E87A5664}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{778595E2-DAC3-42BC-95C5-7FC8E87A5664}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{778595E2-DAC3-42BC-95C5-7FC8E87A5664}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{778595E2-DAC3-42BC-95C5-7FC8E87A5664}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E5F7DC06-8E7F-4948-8A49-21E06027C3D2}
+	EndGlobalSection
+EndGlobal

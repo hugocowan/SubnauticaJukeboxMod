@@ -1,0 +1,58 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+	<AssemblyName>JukeboxSpotify</AssemblyName>
+    <Version>1.0.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>11</LangVersion>
+	<RootNamespace>JukeboxSpotify</RootNamespace>
+
+    <RestoreAdditionalProjectSources>
+      https://api.nuget.org/v3/index.json;
+      https://nuget.bepinex.dev/v3/index.json;
+    </RestoreAdditionalProjectSources>
+
+    <RunPostBuildEvent>Always</RunPostBuildEvent>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="1.1.0" />
+    <PackageReference Include="DebounceThrottle" Version="3.0.1" />
+    <PackageReference Include="SpotifyAPI.Web" Version="7.1.1" />
+    <PackageReference Include="SpotifyAPI.Web.Auth" Version="7.1.1" />
+    <PackageReference Include="UnityEngine.Modules" Version="2019.4.36" IncludeAssets="compile" />
+    <PackageReference Include="Subnautica.BelowZero.GameLibs" Version="49371.0.0.1-r.0" />
+    <PackageReference Include="SubnauticaZero.Nautilus" Version="1.*-*" PrivateAssets="all" />
+    <PackageReference Include="PolySharp" Version="1.13.1" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="SETLOCAL EnableExtensions&#xD;&#xA;SET EXE=SubnauticaZero.exe&#xD;&#xA;REM for testing&#xD;&#xA;REM SET EXE=svchost.exe&#xD;&#xA;FOR /F %25%25x IN ('tasklist /NH /FI &quot;IMAGENAME eq %25EXE%25&quot;') DO IF NOT %25%25x == %25EXE%25 (&#xD;&#xA;  ECHO %25EXE%25 is Not Running&#xD;&#xA;) ELSE (&#xD;&#xA;  ECHO %25EXE%25 is running, shutting it down.&#xD;&#xA;  Taskkill /IM %25EXE%25 /F &gt; nul 2&gt; nul&#xD;&#xA;  ping -n 2 localhost &gt;nul&#xD;&#xA;)" />
+  </Target>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="call &quot;$(SolutionDir)moveBuild.cmd&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\SubnauticaZero\BepInEx\plugins\JukeboxSpotify\&quot; &quot;C:\Users\hugoc\my-projects\JukeboxSpotify\&quot;&#xD;&#xA;start steam://rungameid/848450" />
+  </Target>
+</Project>
