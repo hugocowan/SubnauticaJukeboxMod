@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using SpotifyAPI.Web;
 using System;
 using UnityEngine;
 
@@ -14,37 +13,34 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return;
 
                 if (Vars.repeatTrack)
                 {
-                    await Vars.client.Player.SeekTo(new PlayerSeekToRequest(0));
+                    await Plugin.MediaController.SeekAsync(0);
                     Vars.timeTrackStarted = Time.time;
                     Vars.startingPosition = 0;
                     return;
                 }
 
-                await Vars.client.Player.SetVolume(new PlayerVolumeRequest(0));
-
                 if (forward)
                 {
                     if (Plugin.config.logging) Plugin.Logger.LogInfo("Skip next track");
-                    await Vars.client.Player.SkipNext(new PlayerSkipNextRequest() { DeviceId = Plugin.config.deviceId });
+                    await Plugin.MediaController.NextAsync();
                 }
                 else
                 {
                     if (Plugin.config.logging) Plugin.Logger.LogInfo("Skip previous track");
-                    await Vars.client.Player.SkipPrevious(new PlayerSkipPreviousRequest() { DeviceId = Plugin.config.deviceId });
+                    await Plugin.MediaController.PreviousAsync();
                 }
 
                 if (!Vars.jukeboxIsRunning)
                 {
-                    await Vars.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Plugin.config.deviceId });
+                    await Plugin.MediaController.PauseAsync();
                 }
                 Vars.timeTrackStarted = Time.time;
                 Vars.startingPosition = 1000;
                 Vars.manualPause = false;
-                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(Vars.spotifyVolume)));
             }
             catch (Exception e)
             {
@@ -60,15 +56,15 @@ namespace JukeboxSpotify
             {
                 if (Plugin.config.logging) Plugin.Logger.LogInfo("Application Quit");
                 uGUI_SceneLoadingPatcher.loadingDone = false;
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return;
                 Vars.volumeThrottler.Throttle(() => { }); // Clear the throttler
                 if (!Vars.playingOnStartup)
                 {
-                    var playbackRequest = new PlayerPausePlaybackRequest() { DeviceId = Plugin.config.deviceId };
-                    Vars.client.Player.PausePlayback(playbackRequest);
+                    Plugin.MediaController.PauseAsync().Forget("Pausing media on application quit");
                     Vars.jukeboxIsRunning = false;
                 }
-                Vars.client.Player.SetVolume(new PlayerVolumeRequest(100));
+                JukeboxFmodAudioEmitter.StopAll();
+                Plugin.MediaController.ShutdownAsync().Forget("Shutting down media controller");
             }
             catch (Exception e)
             {
@@ -82,7 +78,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || null == Vars.client) return;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || !Vars.HasActiveMediaController) return;
 
                 if (Plugin.config.logging) Plugin.Logger.LogInfo("Play track");
                 Jukebox.volume = 0;
@@ -94,11 +90,17 @@ namespace JukeboxSpotify
 
                 try
                 {
-                    Vars.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Plugin.config.deviceId });
+                    Plugin.MediaController.PlayAsync().Forget("Resuming media playback");
+                    if (!Plugin.MediaController.SupportsSourceVolume && __instance != null && __instance._instance != null)
+                    {
+                        JukeboxFmodAudioEmitter.GetOrCreate(__instance._instance)
+                            .EnsurePlayingAsync(Plugin.MediaController, Vars.jukeboxVolume)
+                            .Forget("Starting native jukebox audio");
+                    }
                 }
                 catch (Exception e)
                 {
-                    if (Plugin.config.logging) Plugin.Logger.LogError("Resume failed, likely because Spotify is already playing : " + e);
+                    if (Plugin.config.logging) Plugin.Logger.LogError("Resume failed, likely because the media source is already playing : " + e);
                 }
             }
             catch (Exception e)
@@ -113,7 +115,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(Jukebox.HandleOpenError))]
         public static void HandleOpenErrorPostfix(Jukebox __instance)
         {
-            if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+            if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return;
             if (Plugin.config.logging) Plugin.Logger.LogInfo("We have an open error D: this._failed: " + __instance._failed);
         }
 
@@ -121,7 +123,7 @@ namespace JukeboxSpotify
         [HarmonyPatch(nameof(Jukebox.UpdateLowLevel))]
         public static void UpdateLowLevelPrefix(Jukebox __instance)
         {
-            if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+            if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return;
             __instance._file = Vars.defaultTrack; // This avoids errors and generally makes the jukebox very, Very happy.
         }
 
@@ -131,12 +133,12 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (Plugin.config.enableModToggle && null != Vars.client)
+                if (Plugin.config.enableModToggle && Vars.HasActiveMediaController)
                 {
                     KeepAlive();
                 }
 
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client || !uGUI_SceneLoadingPatcher.loadingDone)
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController || !uGUI_SceneLoadingPatcher.loadingDone)
                 {
                     // If the mod has been disabled, make sure the jukebox is reset.
                     if (Vars.resetJukebox) ResetJukebox(__instance);
@@ -176,14 +178,14 @@ namespace JukeboxSpotify
                     )
                 )
                 {
-                    if (Plugin.config.logging) Plugin.Logger.LogInfo($"Pause track. __instance._paused: " + __instance._paused + 
-                        " | jukeboxIsPaused: " + Vars.jukeboxIsPaused + " | manualPause: " + Vars.manualPause + " | menuPause: " + Vars.menuPause + 
+                    if (Plugin.config.logging) Plugin.Logger.LogInfo($"Pause track. __instance._paused: " + __instance._paused +
+                        " | jukeboxIsPaused: " + Vars.jukeboxIsPaused + " | manualPause: " + Vars.manualPause + " | menuPause: " + Vars.menuPause +
                         " | audible: " + !__instance._audible + " | soundPositionNotOrigin: " + soundPositionNotOrigin + " | config.pauseOnLeave:" + Plugin.config.pauseOnLeave);
                     Pause(__instance, isPowered);
                 }
                 else if (
                     isPowered &&
-                    (__instance._paused || Vars.jukeboxIsPaused) && 
+                    (__instance._paused || Vars.jukeboxIsPaused) &&
                     !Vars.manualPause && !Vars.menuPause &&
                     (
                         (__instance._audible && soundPositionNotOrigin && Plugin.config.pauseOnLeave && Vars.distancePause) ||
@@ -193,15 +195,16 @@ namespace JukeboxSpotify
                 )
                 {
                     if (Plugin.config.logging) Plugin.Logger.LogInfo($"Resume track. __instance._paused: " + __instance._paused +
-                        " | jukeboxIsPaused: " + Vars.jukeboxIsPaused + " | manualPause: " + Vars.manualPause + " | menuPause: " + Vars.menuPause + 
-                        " | audible: " + !__instance._audible + " | soundPositionNotOrigin: " + soundPositionNotOrigin + "config.pauseOnLeave:" + Plugin.config.pauseOnLeave + 
-                        " | distancePause: "  + Vars.distancePause + " | wasPlayingBeforeMenuPause: " + Vars.wasPlayingBeforeMenuPause + " | manualPlay: " + Vars.manualPlay);
+                        " | jukeboxIsPaused: " + Vars.jukeboxIsPaused + " | manualPause: " + Vars.manualPause + " | menuPause: " + Vars.menuPause +
+                        " | audible: " + !__instance._audible + " | soundPositionNotOrigin: " + soundPositionNotOrigin + "config.pauseOnLeave:" + Plugin.config.pauseOnLeave +
+                        " | distancePause: " + Vars.distancePause + " | wasPlayingBeforeMenuPause: " + Vars.wasPlayingBeforeMenuPause + " | manualPlay: " + Vars.manualPlay);
                     Resume(__instance);
                 }
 
                 UpdateVolume(__instance, isPowered, soundPositionNotOrigin);
 
-            } catch(Exception e)
+            }
+            catch (Exception e)
             {
                 if (Plugin.config.logging) Plugin.Logger.LogError("Something went wrong with updating the Jukebox : " + e);
             }
@@ -244,10 +247,9 @@ namespace JukeboxSpotify
 
         private static void Pause(Jukebox __instance, bool isPowered)
         {
-            if (Vars.spotifyVolume != 0 && (!isPowered || !__instance._audible))
+            if (__instance != null && __instance._instance != null)
             {
-                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(0)));
-                Vars.spotifyVolume = 0;
+                JukeboxFmodAudioEmitter.GetOrCreate(__instance._instance).SetPlaybackActive(false);
             }
 
             if (!__instance._audible) Vars.distancePause = true;
@@ -264,11 +266,18 @@ namespace JukeboxSpotify
             Vars.jukeboxActionTimestamp = Time.time;
             Vars.manualPause = false;
             Vars.manualPlay = false;
-            Vars.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Plugin.config.deviceId });
+            Plugin.MediaController.PauseAsync().Forget("Pausing media source");
         }
 
         private static void Resume(Jukebox __instance)
         {
+            if (__instance != null && __instance._instance != null)
+            {
+                JukeboxFmodAudioEmitter.GetOrCreate(__instance._instance)
+                    .EnsurePlayingAsync(Plugin.MediaController, Vars.jukeboxVolume)
+                    .Forget("Resuming native jukebox audio");
+            }
+
             if (Vars.manualPlay && __instance._instance.canvas.enabled)
             {
                 __instance._instance.OnButtonPlayPause();
@@ -283,41 +292,17 @@ namespace JukeboxSpotify
             Vars.manualPause = false;
             Vars.jukeboxActionTimestamp = Time.time;
             Vars.distancePause = false;
-            Vars.client.Player.ResumePlayback(new PlayerResumePlaybackRequest() { DeviceId = Plugin.config.deviceId });
+            Plugin.MediaController.PlayAsync().Forget("Resuming media source");
         }
 
         private static void UpdateVolume(Jukebox __instance, bool isPowered, bool soundPositionNotOrigin)
         {
             if (isPowered && soundPositionNotOrigin && __instance._audible)
             {
-                // Here we get the player position in relation to the nearest jukebox or speaker and adjust volume accordingly.
-                Vector3 playerPosition = ((Player.main != null) ? Player.main.transform : MainCamera.camera.transform).position;
-                float sqrMagnitude = (__instance.soundPosition - playerPosition).sqrMagnitude;
-                int volumePercentage = (int)((Vars.jukeboxVolume - sqrMagnitude / 400) * 100) + 1;
-                bool seaTruckJukeboxPlaying = null != __instance._instance.GetComponentInParent<SeaTruckSegment>(); // Check whether the jukebox is in a SeaTruck.
-
-                // If the player is underwater, or if the seatruck jukebox is playing but the player is not in the seatruck, or if a base's jukebox is playing but they aren't in the base,
-                // halve the music volume as there is a body of water between the jukebox and the player.
-                if (
-                    null != Player.main && (true == Player.main.isUnderwater.value) ||
-                    (seaTruckJukeboxPlaying && (null == Player.main.currentInterior || Player.main.currentInterior.GetType().ToString() != "SeaTruckSegment")) ||
-                    (!seaTruckJukeboxPlaying && (null == Player.main.currentInterior || Player.main.currentInterior.GetType().ToString() != "BaseRoot"))
-                    )
+                if (__instance._instance != null)
                 {
-                    volumePercentage /= 2;
+                    JukeboxFmodAudioEmitter.GetOrCreate(__instance._instance).SetBaseVolume(Vars.jukeboxVolume);
                 }
-
-                int volumeDiff = Math.Abs(Vars.spotifyVolume - volumePercentage);
-
-                if (volumeDiff > 1) Vars.volumeTimer = Time.time;
-
-                volumePercentage += Vars.volumeModifier; // This ensures Spotify has sound when it's paused/has 0 volume.
-                Vars.volumeModifier = (Vars.volumeModifier < 0) ? 0 : -1;
-
-                if (volumePercentage < 0) volumePercentage = 0;
-                if (volumePercentage > 100) volumePercentage = 100;
-                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
-                Vars.spotifyVolume = volumePercentage;
             }
         }
 
@@ -327,11 +312,8 @@ namespace JukeboxSpotify
             if (Time.time > (Vars.getTrackTimer + 1))
             {
                 Vars.getTrackTimer = Time.time;
-                _ = Spotify.GetTrackInfo();
+                MediaPlaybackCoordinator.RefreshAsync().Forget("Refreshing media playback state");
             }
-
-            // Keep the Spotify access token up to date
-            if (Vars.refreshSessionTimer != 0 && Time.time > (Vars.refreshSessionTimer + Vars.refreshSessionExpiryTime - 2)) _ = Spotify.RefreshSession();
         }
 
         private static void ResetJukebox(Jukebox __instance)
@@ -340,6 +322,7 @@ namespace JukeboxSpotify
 
             if (__instance._instance)
             {
+                JukeboxFmodAudioEmitter.StopAll();
                 __instance._instance.file = Vars.defaultTrack;
                 Jukebox.position = 0;
                 Jukebox.GetNext(__instance._instance, true);

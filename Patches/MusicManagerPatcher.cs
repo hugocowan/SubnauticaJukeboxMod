@@ -9,7 +9,7 @@ namespace JukeboxSpotify
         [HarmonyPatch("OnGamePaused")]
         public static void OnGamePausedPostfix()
         {
-            if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+            if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return;
             Vars.menuPause = true;
             Vars.wasPlayingBeforeMenuPause = (Vars.jukeboxIsRunning && !Vars.jukeboxIsPaused);
         }
@@ -18,7 +18,7 @@ namespace JukeboxSpotify
         [HarmonyPatch("OnGameResumed")]
         public static void OnGameResumedPostfix()
         {
-            if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+            if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return;
             Vars.menuPause = false;
         }
     }

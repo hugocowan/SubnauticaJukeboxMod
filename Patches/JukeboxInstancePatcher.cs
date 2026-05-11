@@ -1,5 +1,4 @@
 ﻿using HarmonyLib;
-using SpotifyAPI.Web;
 using System;
 using UnityEngine;
 
@@ -33,14 +32,14 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return;
                 length = Vars.currentTrackLength;
             }
             catch (Exception e)
             {
                 if (Plugin.config.logging) Plugin.Logger.LogError("Something went wrong with setting the track length : " + e);
             }
-                                       
+
         }
 
         [HarmonyPrefix]
@@ -49,10 +48,10 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return;
                 if (Vars.justStarted && (Vars.playingOnStartup || Vars.manualPlay) && null != __instance)
                 {
-                    if (Plugin.config.logging) Plugin.Logger.LogInfo("Starting jukebox as Spotify is already playing. Playing closest Jukebox.");
+                    if (Plugin.config.logging) Plugin.Logger.LogInfo("Starting jukebox because the active media session is already playing. Playing closest Jukebox.");
 
                     JukeboxInstance closestJukeboxInstance = __instance;
                     float closestJukeboxSquareMagnitude = 9999999999999;
@@ -88,12 +87,12 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client || !IsPowered(__instance)) return;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController || !IsPowered(__instance)) return;
 
-                int volumePercentage = (int) (__instance.volume * 100);
-                Vars.spotifyVolume = volumePercentage;
+                int volumePercentage = (int)(__instance.volume * 100);
+                Vars.sourceVolume = volumePercentage;
                 Vars.jukeboxVolume = __instance.volume;
-                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(volumePercentage)));
+                JukeboxFmodAudioEmitter.GetOrCreate(__instance).SetBaseVolume(__instance.volume);
                 Jukebox.volume = 0;
             }
             catch (Exception e)
@@ -120,9 +119,9 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return true;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return true;
                 if (!IsPowered(__instance)) return false;
-                if (__instance.shuffle == Vars.spotifyShuffleState) Vars.client.Player.SetShuffle(new PlayerShuffleRequest(!__instance.shuffle));
+                if (__instance.shuffle == Vars.sourceShuffleState) Plugin.MediaController.SetShuffleAsync(!__instance.shuffle).Forget("Setting shuffle state");
             }
             catch (Exception e)
             {
@@ -130,36 +129,36 @@ namespace JukeboxSpotify
             }
 
             return true;
-        }        
-        
+        }
+
         [HarmonyPrefix]
         [HarmonyPatch(nameof(JukeboxInstance.OnButtonRepeat))]
         public static bool OnButtonRepeatPrefix(JukeboxInstance __instance)
         {
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return true;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return true;
                 if (!IsPowered(__instance)) return false;
                 if (Plugin.config.logging) Plugin.Logger.LogInfo("Repeat button pressed");
 
-                PlayerSetRepeatRequest.State state;
+                MediaRepeatMode state;
 
                 switch (__instance.repeat.ToString())
                 {
                     case "Track":
                         Vars.repeatTrack = true;
-                        state = PlayerSetRepeatRequest.State.Track;
+                        state = MediaRepeatMode.Track;
                         break;
                     case "All":
                         Vars.repeatTrack = false;
-                        state = PlayerSetRepeatRequest.State.Off;
+                        state = MediaRepeatMode.Off;
                         break;
                     default:
                         Vars.repeatTrack = false;
-                        state = PlayerSetRepeatRequest.State.Context;
+                        state = MediaRepeatMode.Context;
                         break;
                 }
-                Vars.client.Player.SetRepeat(new PlayerSetRepeatRequest(state));
+                Plugin.MediaController.SetRepeatModeAsync(state).Forget("Setting repeat state");
             }
             catch (Exception e)
             {
@@ -193,7 +192,7 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client || !IsPowered(__instance)) return;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController || !IsPowered(__instance)) return;
 
                 if (Plugin.config.logging) Plugin.Logger.LogInfo("Stop track");
                 Vars.jukeboxIsPaused = false;
@@ -202,20 +201,21 @@ namespace JukeboxSpotify
                 Vars.jukeboxIsRunning = false;
                 Vars.startingPosition = 0;
                 Vars.jukeboxActionTimestamp = Time.time;
-                Vars.client.Player.PausePlayback(new PlayerPausePlaybackRequest() { DeviceId = Plugin.config.deviceId });
-                Vars.volumeThrottler.Throttle(() => Vars.client.Player.SetVolume(new PlayerVolumeRequest(100)));
+                JukeboxFmodAudioEmitter.GetOrCreate(__instance).StopAndDispose();
+
+                Plugin.MediaController.PauseAsync().Forget("Pausing media on stop");
                 if (Vars.stopCounter >= 1 || !Plugin.config.stopTwiceForStart)
                 {
                     if (Plugin.config.logging) Plugin.Logger.LogInfo("Setting track to the start");
                     Vars.stopCounter = 0;
                     Vars.timeTrackStarted = Time.time;
-                    Vars.client.Player.SeekTo(new PlayerSeekToRequest(0));
+                    Plugin.MediaController.SeekAsync(0).Forget("Seeking track to start");
                 }
                 else
                 {
                     Vars.stopCounter++;
                 }
-                
+
             }
             catch (Exception e)
             {
@@ -236,14 +236,14 @@ namespace JukeboxSpotify
         {
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client || !IsPowered(__instance)) return;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController || !IsPowered(__instance)) return;
 
                 if (Vars.jukeboxIsRunning || Vars.jukeboxIsPaused)
                 {
-                    long trackPosition = (long) (Vars.currentTrackLength * __instance._position); // _position is a percentage
+                    long trackPosition = (long)(Vars.currentTrackLength * __instance._position); // _position is a percentage
                     Vars.beyondFiveMins = (trackPosition / 1000) >= 300;
                     if (Plugin.config.logging) Plugin.Logger.LogInfo("End drag occured");
-                    Vars.client.Player.SeekTo(new PlayerSeekToRequest(trackPosition) { DeviceId = Plugin.config.deviceId });
+                    Plugin.MediaController.SeekAsync(trackPosition).Forget("Seeking media source");
                     Vars.timeTrackStarted = Time.time - trackPosition / 1000;
                 }
             }
@@ -261,7 +261,7 @@ namespace JukeboxSpotify
             if (Plugin.config.logging) Plugin.Logger.LogInfo("Playpause triggered: " + Vars.playPauseTimestamp + " | time: " + Time.time);
             try
             {
-                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || null == Vars.client) return true;
+                if (!Plugin.config.enableModToggle || JukeboxInstance.all.Count == 0 || Vars.noTrack || !Vars.HasActiveMediaController) return true;
 
                 // This is to stop the method getting called very quickly after the first one.
                 if (Vars.playPauseTimestamp + 0.5 > Time.time)

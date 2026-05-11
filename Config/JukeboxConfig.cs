@@ -19,8 +19,11 @@ namespace JukeboxSpotify
         [Toggle("Double press ■ for song start")]
         public bool stopTwiceForStart = false;
 
+        [Toggle("Prefer native Windows media session"), OnChange(nameof(OnBackendPreferenceChanged))]
+        public bool preferNativeWindowsMediaSession = true;
+
         [Toggle("Enable logging (for debugging)")]
-        public bool logging = false;
+        public bool logging = true;
 
         public string clientId;
 
@@ -30,17 +33,36 @@ namespace JukeboxSpotify
 
         public string deviceId;
 
+        private async void OnBackendPreferenceChanged(ToggleChangedEventArgs e)
+        {
+            Plugin.LogDebug("Backend preference changed. preferNativeWindowsMediaSession=" + e.Value + ". Resetting jukebox state and reinitializing media control.");
+
+            if (!enableModToggle)
+            {
+                Plugin.LogDebug("Skipping backend reinitialization because the mod is disabled.");
+                return;
+            }
+
+            Vars.manualPause = true;
+            Vars.resetJukebox = true;
+            Plugin.MediaController = MediaControllerFactory.CreateDefault();
+            await MediaPlaybackCoordinator.InitializeAsync();
+        }
+
         private async void MyCheckboxToggleEvent(ToggleChangedEventArgs e)
         {
+            Plugin.LogDebug("Mod enabled toggle changed. enabled=" + e.Value);
             Vars.manualPause = true;
 
             if (!e.Value)
             {
+                Plugin.LogDebug("Marking jukebox for reset because the mod was disabled.");
                 Vars.resetJukebox = true;
             }
             else
             {
-                await Spotify.SpotifyLogin();
+                Plugin.LogDebug("Reinitializing media playback because the mod was enabled.");
+                await MediaPlaybackCoordinator.InitializeAsync();
             }
         }
     }

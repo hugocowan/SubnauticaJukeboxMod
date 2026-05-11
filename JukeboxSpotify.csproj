@@ -24,7 +24,7 @@
     <PackageReference Include="SpotifyAPI.Web" Version="7.1.1" />
     <PackageReference Include="SpotifyAPI.Web.Auth" Version="7.1.1" />
     <PackageReference Include="UnityEngine.Modules" Version="2019.4.36" IncludeAssets="compile" />
-    <PackageReference Include="Subnautica.BelowZero.GameLibs" Version="49371.0.0.1-r.0" />
+    <PackageReference Include="Subnautica.BelowZero.GameLibs" Version="53115.0.0-r.0" />
     <PackageReference Include="SubnauticaZero.Nautilus" Version="1.*-*" PrivateAssets="all" />
     <PackageReference Include="PolySharp" Version="1.13.1" />
   </ItemGroup>
@@ -48,11 +48,11 @@
     </None>
   </ItemGroup>
 
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="'$(OS)' == 'Windows_NT'">
     <Exec Command="SETLOCAL EnableExtensions&#xD;&#xA;SET EXE=SubnauticaZero.exe&#xD;&#xA;REM for testing&#xD;&#xA;REM SET EXE=svchost.exe&#xD;&#xA;FOR /F %25%25x IN ('tasklist /NH /FI &quot;IMAGENAME eq %25EXE%25&quot;') DO IF NOT %25%25x == %25EXE%25 (&#xD;&#xA;  ECHO %25EXE%25 is Not Running&#xD;&#xA;) ELSE (&#xD;&#xA;  ECHO %25EXE%25 is running, shutting it down.&#xD;&#xA;  Taskkill /IM %25EXE%25 /F &gt; nul 2&gt; nul&#xD;&#xA;  ping -n 2 localhost &gt;nul&#xD;&#xA;)" />
   </Target>
 
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="'$(OS)' == 'Windows_NT'">
     <Exec Command="call &quot;$(SolutionDir)moveBuild.cmd&quot; &quot;C:\Program Files (x86)\Steam\steamapps\common\SubnauticaZero\BepInEx\plugins\JukeboxSpotify\&quot; &quot;C:\Users\hugoc\my-projects\JukeboxSpotify\&quot;&#xD;&#xA;start steam://rungameid/848450" />
   </Target>
 </Project>

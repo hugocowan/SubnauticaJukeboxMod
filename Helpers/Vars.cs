@@ -1,6 +1,4 @@
 ﻿using DebounceThrottle;
-using SpotifyAPI.Web;
-using SpotifyAPI.Web.Auth;
 using System;
 
 namespace JukeboxSpotify
@@ -8,11 +6,11 @@ namespace JukeboxSpotify
     internal static class Vars
     {
         public static ThrottleDispatcher volumeThrottler = new ThrottleDispatcher(TimeSpan.FromMilliseconds(333));
+        public static IMediaController mediaController = new NullMediaController();
         public static bool repeatTrack;
         public static bool justStarted;
         public static uint startingPosition = 0;
-        public static SpotifyClient client;
-        public static bool spotifyLoginStarted;
+        public static bool mediaControllerInitializationStarted;
         public static bool playingOnStartup;
         public static bool newJukeboxInstance;
         public static bool jukeboxIsRunning;
@@ -24,14 +22,14 @@ namespace JukeboxSpotify
         public static bool wasPlayingBeforeMenuPause;
         public static bool jukeboxNeedsUpdating;
         public static string defaultTrack = "event:/jukebox/jukebox_takethedive";
-        public static string currentTrackTitle = "Spotify Jukebox Mod";
+        public static string currentTrackTitle = "OS Media Jukebox";
         public static uint currentTrackLength = 0;
         public static float timeTrackStarted = 0;
         public static float playPauseTimestamp = 0;
-        public static int spotifyVolume = 100;
+        public static int sourceVolume = 100;
         public static float jukeboxVolume = Jukebox.volume;
         public static bool resetJukebox;
-        public static bool spotifyShuffleState;
+        public static bool sourceShuffleState;
         public static bool noTrack;
         public static bool beyondFiveMins;
         public static bool positionDrag;
@@ -39,21 +37,20 @@ namespace JukeboxSpotify
         public static int volumeModifier = 1;
         public static int stopCounter = 0;
         public static float getTrackTimer = 0;
-        public static float refreshSessionTimer = 0;
-        public static float refreshSessionExpiryTime = 3600;
         public static float volumeTimer = 0;
         public static float jukeboxActionTimestamp = 0;
         public static float currentPosition = 0;
-        public static EmbedIOAuthServer _server;
+
+        public static bool HasActiveMediaController => mediaController != null && mediaController.IsReady;
 
         public static void reset()
         {
-            _server = null;
             volumeThrottler = new ThrottleDispatcher(TimeSpan.FromMilliseconds(333));
+            mediaController = new NullMediaController();
             repeatTrack = false;
             justStarted = false;
             startingPosition = 0;
-            client = null;
+            mediaControllerInitializationStarted = false;
             playingOnStartup = false;
             newJukeboxInstance = false;
             jukeboxIsRunning = false;
@@ -64,14 +61,14 @@ namespace JukeboxSpotify
             distancePause = false;
             wasPlayingBeforeMenuPause = false;
             jukeboxNeedsUpdating = false;
-            currentTrackTitle = "Spotify Jukebox Mod";
+            currentTrackTitle = "OS Media Jukebox";
             currentTrackLength = 0;
             timeTrackStarted = 0;
             playPauseTimestamp = 0;
-            spotifyVolume = 100;
+            sourceVolume = 100;
             jukeboxVolume = Jukebox.volume;
             resetJukebox = false;
-            spotifyShuffleState = false;
+            sourceShuffleState = false;
             noTrack = false;
             beyondFiveMins = false;
             positionDrag = false;
@@ -79,8 +76,6 @@ namespace JukeboxSpotify
             volumeModifier = 1;
             stopCounter = 0;
             getTrackTimer = 0;
-            refreshSessionTimer = 0;
-            refreshSessionExpiryTime = 3600;
             volumeTimer = 0;
             jukeboxActionTimestamp = 0;
             currentPosition = 0;

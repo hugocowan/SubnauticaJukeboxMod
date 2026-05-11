@@ -12,6 +12,7 @@ namespace JukeboxSpotify
         public static void EndPostfix()
         {
             loadingDone = true;
+            Plugin.LogDebug("Scene loading completed. uGUI_SceneLoading.End fired and loadingDone was set to true.");
         }
     }
 }
