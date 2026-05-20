@@ -1,0 +1,21 @@
+{
+  "profiles": {
+    "Subnautica Below Zero": {
+      "commandName": "Executable",
+      "executablePath": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SubnauticaZero\\SubnauticaZero.exe",
+      "workingDirectory": "C:\\Program Files (x86)\\Steam\\steamapps\\common\\SubnauticaZero",
+      "nativeDebugging": false,
+      "console": "internalConsole",
+      "stopOnEntry": false
+    },
+    "Attach to Subnautica": {
+      "commandName": "Executable",
+      "remoteDebugEnabled": false,
+      "nativeDebugging": false,
+      "symbolPath": "",
+      "sourceMapPath": "",
+      "sourceRoot": "",
+      "console": "mergeOutput",
+      "redirectOutput": true
+    }
+  }

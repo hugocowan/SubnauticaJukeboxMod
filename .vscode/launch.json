@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Attach to Subnautica",
+            "type": "clr",
+            "request": "attach",
+            "processId": "${command:pickProcess}",
+            "justMyCode": true
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Build & Debug",
+            "preLaunchTask": "Build & Deploy & Launch",
+            "configurations": [
+                "Attach to Subnautica"
+            ]
+        }
+    ]
+}

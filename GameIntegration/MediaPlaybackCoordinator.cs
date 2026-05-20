@@ -23,13 +23,20 @@ namespace JukeboxSpotify
             await Plugin.MediaController.InitializeAsync();
             Plugin.LogDebug("Primary media controller initialization finished. controller=" + Plugin.MediaController.ControllerName + ", isReady=" + Plugin.MediaController.IsReady);
 
-            if (!Plugin.MediaController.IsReady && Plugin.config.preferNativeWindowsMediaSession)
+            if (!Plugin.MediaController.IsReady)
             {
-                Plugin.LogDebug("Native Windows media session backend did not initialize. Falling back to Spotify Web API.");
+                if (Plugin.MediaController is WindowsMediaSessionController)
+                {
+                    Plugin.LogDebug("Primary Windows Media Session controller did not initialize. No further fallback available.");
+                }
+                else
+                {
+                    Plugin.LogDebug("Primary media controller did not initialize. Falling back to native Windows media session.");
 
-                Plugin.MediaController = new SpotifyWebApiMediaController();
-                await Plugin.MediaController.InitializeAsync();
-                Plugin.LogDebug("Fallback media controller initialization finished. controller=" + Plugin.MediaController.ControllerName + ", isReady=" + Plugin.MediaController.IsReady);
+                    Plugin.MediaController = new WindowsMediaSessionController();
+                    await Plugin.MediaController.InitializeAsync();
+                    Plugin.LogDebug("Fallback media controller initialization finished. controller=" + Plugin.MediaController.ControllerName + ", isReady=" + Plugin.MediaController.IsReady);
+                }
             }
 
             if (Vars.HasActiveMediaController)

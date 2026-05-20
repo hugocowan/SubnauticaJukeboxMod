@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build & Deploy & Launch",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "dotnet build --configuration Release; Write-Host 'Waiting for game to start...'; while (-not (Get-Process -Name SubnauticaZero -ErrorAction SilentlyContinue)) { Start-Sleep -Seconds 2 }; Write-Host 'Game detected!'"
+            ],
+            "problemMatcher": [
+                "$msCompile"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        }
+    ]
+}
